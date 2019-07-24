@@ -1,0 +1,130 @@
+1 案例1：搭建Redis服务器
+1.1 问题
+
+具体要求如下：
+在主机 192.168.4.51 上安装并启用 redis 服务
+设置变量school，值为tarena
+查看变量school的值
+1.2 步骤
+
+实现此案例需要按照如下步骤进行。
+步骤一：搭建redis服务器
+
+1）安装源码redis软件
+ [root@redis1 redis]# yum -y install gcc 
+[root@redis1 redis]# tar -zxf redis-4.0.8.tar.gz
+[root@redis1 redis]# cd redis-4.0.8/
+[root@redis1 redis-4.0.8]# ls
+00-RELEASENOTES  CONTRIBUTING  deps     Makefile   README.md   runtest          runtest-sentinel  src    utils
+BUGS             COPYING       INSTALL  MANIFESTO  redis.conf  runtest-cluster  sentinel.conf     tests
+[root@redis1 redis-4.0.8]# make
+[root@redis1 redis-4.0.8]# make install
+[root@redis1 redis-4.0.8]# cd utils/
+[root@redis1 utils]# ./install_server.sh
+Welcome to the redis service installer
+This script will help you easily set up a running redis server
+Please select the redis port for this instance: [6379] 
+Selecting default: 6379
+Please select the redis config file name [/etc/redis/6379.conf] 
+Selected default - /etc/redis/6379.conf
+Please select the redis log file name [/var/log/redis_6379.log] 
+Selected default - /var/log/redis_6379.log
+Please select the data directory for this instance [/var/lib/redis/6379] 
+Selected default - /var/lib/redis/6379
+Please select the redis executable path [/usr/local/bin/redis-server] 
+Selected config:
+Port           : 6379                   //端口号
+Config file    : /etc/redis/6379.conf         //配置文件目录
+Log file       : /var/log/redis_6379.log      //日志目录
+Data dir       : /var/lib/redis/6379          //数据库目录
+Executable     : /usr/local/bin/redis-server  //启动程序的目录
+Cli Executable : /usr/local/bin/redis-cli     //命令行的连接工具
+Is this ok? Then press ENTER to go on or Ctrl-C to abort.  //回车完成配置
+Copied /tmp/6379.conf => /etc/init.d/redis_6379    //服务启动脚本
+Installing service...
+Successfully added to chkconfig!
+Successfully added to runlevels 345!
+Starting Redis server...  //提示服务已经启动
+Installation successful!        //提示安装成功
+2）查看服务状态
+[root@redis1 utils]#  /etc/init.d/redis_6379 status
+Redis is running (15203)
+3）查看监听的端口
+[root@redis1 utils]# netstat -antupl |grep :6379 //查看端口
+tcp        0      0 127.0.0.1:6379          0.0.0.0:*               LISTEN      15203/redis-server
+[root@redis1 utils]# ps  -C redis-server  //查看进程
+  PID TTY          TIME CMD
+15203 ?        00:00:00 redis-server
+4）停止服务
+[root@redis1 utils]# /etc/init.d/redis_6379 stop
+Stopping ...
+Waiting for Redis to shutdown ...
+Redis stopped
+5）连接redis
+[root@redis1 utils]# /etc/init.d/redis_6379 start 
+Starting Redis server...
+[root@redis1 utils]# redis-cli  //默认连接127.0.0.1地址的 6379端口
+127.0.0.1:6379> ping
+PONG            //PONG说明服务正常
+6）存储变量school，值为tarena，查看变量school的值
+常用指令操作：
+set keyname keyvalue //存储
+get keyname //获取
+127.0.0.1:6379> set school tarena
+OK
+127.0.0.1:6379> get school
+"tarena"
+127.0.0.1:6379>
+2 案例2：常用命令
+2.1 问题
+
+练习如下命令的使用：
+set mset get mget keys type
+exists ttl expire move 、select
+del flushdb flushall save shutdown
+2.2 步骤
+
+实现此案例需要按照如下步骤进行。
+步骤一：命令set 、 mset 、 get 、 mget
+
+具体操作如下
+192.168.4.50:6350> set name bob
+OK
+192.168.4.50:6350> 
+192.168.4.50:6350> mset age 19   sex  boy
+OK
+192.168.4.50:6350> 
+192.168.4.50:6350> get name
+"bob"
+192.168.4.50:6350> 
+192.168.4.50:6350> mget age sex
+1) "19"
+2) "boy"
+192.168.4.50:6350> 
+192.168.4.50:6350>
+步骤二：命令keys 、 type 、 exists 、 del
+
+具体操作如下
+192.168.4.50:6350> keys *
+1) "sex"
+2) "age"
+3) "name"
+192.168.4.50:6350> 
+192.168.4.50:6350> keys  ???
+1) "sex"
+2) "age"
+192.168.4.50:6350> keys a*
+1) "age"
+192.168.4.50:6350> 
+192.168.4.50:6350> type age //使用set命令存储的变量都是字符类型
+string
+192.168.4.50:6350> 
+192.168.4.50:6350> del age
+(integer) 1
+192.168.4.50:6350>
+192.168.4.50:6350> exists age //变量不存储返回值0
+(integer) 0
+192.168.4.50:6350> 
+192.168.4.50:6350> exists sex  //变量存在 返回值1
+(integer) 1
+192.168.4.50:6350>
