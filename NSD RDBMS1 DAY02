@@ -1,0 +1,217 @@
+案例1：约束条件
+案例2：修改表结构
+案例3：index 普通索引
+案例4：primary key 主键
+案例5：foreign key 外键
+1 案例1：约束条件
+1.1 问题
+
+具体要求如下：
+如图-1所示设置约束条件
+￼
+图－1
+1.2 步骤
+
+实现此案例需要按照如下步骤进行。
+步骤一：设置约束
+
+在db2库里创建t2表时设置字段约束条件
+mysql>
+mysql> create database db2; //建库
+Query OK, 1 row affected (0.00 sec)
+mysql> use  db2; //切换库
+Database changed
+mysql> create table  t2 (  //建表
+    -> class   char(9),
+    -> name    char(10) not null  ,
+    -> age     tinyint  not null default  19 ,
+    -> likes   set("a","b","c","d")  default  "a,b"
+    -> );
+Query OK, 0 rows affected (0.05 sec)
+mysql> desc t2; //查看表结构
++-------+----------------------+------+-----+---------+-------+
+| Field | Type                 | Null | Key | Default | Extra |
++-------+----------------------+------+-----+---------+-------+
+| class | char(9)              | YES  |     | NULL    |       |
+| name  | char(10)             | NO   |     | NULL    |       |
+| age   | tinyint(4)           | NO   |     | 19      |       |
+| likes | set('a','b','c','d') | YES  |     | a,b     |       |
++-------+----------------------+------+-----+---------+-------+
+4 rows in set (0.00 sec)
+mysql>
+mysql> insert into  t2  values (null,"bob",29,"c,d");
+Query OK, 1 row affected (0.05 sec)
+mysql> insert into  t2(class,name) values ("nsd1902","tom");
+Query OK, 1 row affected (0.05 sec)
+mysql> insert into  t2  values (null,null,null,null);
+ERROR 1048 (23000): Column 'name' cannot be null  //不允许赋null值
+MariaDB [db2]>
+MariaDB [db2]> select  * from db2.t1;  //查看记录
++---------+------+-----+-------+
+| class   | name | age | likes |
++---------+------+-----+-------+
+| NULL    | bob  |  29 | c,d   |
+| nsd1902 | tom  |  19 | a,b   |
++---------+------+-----+-------+
+2 rows in set (0.00 sec)
+mysql>
+2 案例2：修改表结构
+2.1 问题
+
+具体要求如下：
+添加字段
+修改字段名
+修改字段类型
+删除字段
+修改表名
+2.2 步骤
+
+实现此案例需要按照如下步骤进行。
+步骤一：添加字段
+
+Mysql> create database studb;
+mysql> CREATE TABLE studb.tea6(
+-> id int(4) ,
+    -> name varchar(4) NOT NULL,
+    -> age int(2) NOT NULL
+    -> );
+Query OK, 0 rows affected (0.34 sec)
+mysql>
+为tea6表添加一个address字段
+添加前：
+mysql> DESC tea6;
++-------+------------+------+-----+---------+-------+
+| Field | Type       | Null | Key | Default | Extra |
++-------+------------+------+-----+---------+-------+
+| id    | int(4)     |  YES  |      | NULL    |       |
+| name  | varchar(4) | NO   |     | NULL    |       |
+| age   | int(2)     | NO   |     | NULL    |       |
++-------+------------+------+-----+---------+-------+
+3 rows in set (0.00 sec)
+添加address字段：
+mysql> ALTER TABLE tea6 ADD address varchar(48);
+Query OK, 0 rows affected (0.84 sec)
+Records: 0  Duplicates: 0  Warnings: 0
+添加后（默认作为最后一个字段）：
+mysql> DESC tea6;
++---------+-------------+------+-----+---------+-------+
+| Field   | Type        | Null | Key | Default | Extra |
++---------+-------------+------+-----+---------+-------+
+| id      | int(4)      | YES   |   | NULL    |       |
+| name    | varchar(4)  | NO   |     | NULL    |       |
+| age     | int(2)      | NO   |     | NULL    |       |
+| address | varchar(48) | YES  |     | NULL    |       |
++---------+-------------+------+-----+---------+-------+
+4 rows in set (0.00 sec)
+3）在tea6表的age列之后添加一个gender字段
+添加操作：
+mysql> ALTER TABLE tea6 ADD gender enum('boy','girl') AFTER age;
+Query OK, 0 rows affected (0.59 sec)
+Records: 0  Duplicates: 0  Warnings: 0
+确认添加结果：
+mysql> DESC tea6;
++---------+--------------------+------+-----+---------+-------+
+| Field   | Type               | Null | Key | Default | Extra |
++---------+--------------------+------+-----+---------+-------+
+| id      | int(4)             |YES   |  | NULL    |       |
+| name    | varchar(4)         | NO   |     | NULL    |       |
+| age     | int(2)             | NO   |     | NULL    |       |
+| gender  | enum('boy','girl') | YES  |     | NULL    |       |
+| address | varchar(48)        | YES  |     | NULL    |       |
++---------+--------------------+------+-----+---------+-------+
+5 rows in set (0.00 sec)
+步骤二：修改字段名和字段类型
+
+将tea6表的gender字段改名为sex，并添加非空约束
+修改操作：
+mysql> ALTER TABLE tea6 CHANGE gender
+    -> sex enum('boy','girl') NOT NULL;
+Query OK, 0 rows affected (0.08 sec)
+Records: 0  Duplicates: 0  Warnings: 0
+确认修改结果：
+mysql> DESC tea6;
++---------+--------------------+------+-----+---------+-------+
+| Field   | Type               | Null | Key | Default | Extra |
++---------+--------------------+------+-----+---------+-------+
+| id      | int(4)             | YES   |   | NULL    |       |
+| name    | varchar(4)         | NO   |     | NULL    |       |
+| age     | int(2)             | NO   |     | NULL    |       |
+| sex     | enum('boy','girl') | NO   |     | NULL    |       |
+| address | varchar(48)        | YES  |     | NULL    |       |
++---------+--------------------+------+-----+---------+-------+
+5 rows in set (0.00 sec)
+步骤三：删除字段
+
+删除tea6表中名为sex的字段：
+mysql> ALTER TABLE tea6 DROP sex;                             //删除操作
+Query OK, 0 rows affected (0.52 sec)
+Records: 0  Duplicates: 0  Warnings: 0
+mysql> DESC tea6;                                          //确认删除结果
++---------+-------------+------+-----+---------+-------+
+| Field   | Type        | Null | Key | Default | Extra |
++---------+-------------+------+-----+---------+-------+
+| id      | int(4)      | YES   |      | NULL    |       |
+| name    | varchar(4)  | NO   |     | NULL    |       |
+| age     | int(2)      | NO   |     | NULL    |       |
+| address | varchar(48) | YES  |     | NULL    |       |
++---------+-------------+------+-----+---------+-------+
+4 rows in set (0.00 sec)
+3 案例3：index 普通索引
+3.1 问题
+
+具体要求如下：
+在已有表里添加index字段
+建表时，添加index字段
+查看表索引
+删除表索引
+3.2 步骤
+
+实现此案例需要按照如下步骤进行。
+步骤一：索引的创建与删除
+
+创建表的时候指定INDEX索引字段
+创建库home：
+mysql> create database home;
+Query OK, 1 row affected (0.00 sec)
+允许有多个INDEX索引字段。比如，以下操作在home库中创建了tea4表，将其中的id、name作为索引字段：
+mysql> USE home;
+Database changed
+mysql> CREATE TABLE tea4(
+    -> id char(6) NOT NULL,
+    -> name varchar(6) NOT NULL,
+    -> age int(3) NOT NULL,
+    -> gender ENUM('boy','girl') DEFAULT 'boy',
+    -> INDEX(id),INDEX(name)
+    -> );
+Query OK, 0 rows affected (0.59 sec)
+查看新建tea4表的字段结构，可以发现两个非空索引字段的KEY标志为MUL：
+mysql> DESC tea4;
++--------+--------------------+------+-----+---------+-------+
+| Field  | Type               | Null | Key | Default | Extra |
++--------+--------------------+------+-----+---------+-------+
+| id     | char(6)            | NO   | MUL | NULL    |       |
+| name   | varchar(6)         | NO   | MUL | NULL    |       |
+| age    | int(3)             | NO   |     | NULL    |       |
+| gender | enum('boy','girl') | YES  |     | boy     |       |
++--------+--------------------+------+-----+---------+-------+
+4 rows in set (0.00 sec)
+2）删除现有表的某个INDEX索引字段
+比如，删除tea4表中名称为named的INDEX索引字段：
+mysql> drop INDEX name ON tea4;                  //删除name字段的索引
+Query OK, 0 rows affected (0.18 sec)
+Records: 0  Duplicates: 0  Warnings: 0
+mysql> DESC tea4;                                      //确认删除结果
++--------+--------------------+------+-----+---------+-------+
+| Field  | Type               | Null | Key | Default | Extra |
++--------+--------------------+------+-----+---------+-------+
+| id     | char(6)            | NO   | MUL | NULL    |       |
+| name   | varchar(6)         | NO   |     | NULL    |       |
+| age    | int(3)             | NO   |     | NULL    |       |
+| gender | enum('boy','girl') | YES  |     | boy     |       |
++--------+--------------------+------+-----+---------+-------+
+4 rows in set (0.00 sec)
+3）在已有的某个表中设置INDEX索引字段
+比如，针对tea4表的age字段建立索引，名称为 nianling：
+mysql> CREATE INDEX nianling ON tea4(age);      //针对指定字段创建索引
+Query OK, 0 rows affected (0.62 sec)
+Records: 0  Duplicates: 0  Warnings: 0
