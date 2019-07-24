@@ -1,0 +1,286 @@
+监控的目的
+
+实时报告系统状态: 每一部分必须同时监控;内容包括吞吐量,反应时间,使用率.
+提前发现系统的问题:进行服务器性能调整前,知道调整什么;找出系统的瓶颈在什么地方
+
+监控的资源可以分为：公开数据 HTTP、FTP、SSH、数据库等应用服务;TCP或UDP端口
+私有数据（CPU、内存、磁盘、网卡流量、进程数）
+
+系统监控软件可以使用：系统自带的命令、Cacti监控系统、Nagios监控系统、Zabbix监控系统。
+ 
+ 监控命令:进程监控 ps top  网络监控 ifconfig netstat或ss ping traceroute 
+         存储监控  free swapon -s df -h
+  
+ 性能监控的常用的性能监控命令: uptime cpu负载  mpastat 查看cpu状态  vmstat查看内存状态
+ iostat查看硬盘转台  netstat 查看网络状态 sar查看以上四类信息
+ 
+ 自动化监控系统
+ Nagios
+基于Agent监控,强大的状态检查与报警机制
+插件极多,自己写监控脚本到Nagios非常方便
+
+Cacti
+基于SNMP协议的监控软件,强大的绘图能力
+
+Zabbix
+基于多种监控机制,支持分布式监控
+
+Zabbix基础
+
+基本概念
+
+Zabbix简介
+
+Zabbix是一个高度集成的监控解决方案
+可以实现企业级的开源分布式监控
+Zabbix通过C/S模式采集监控数据
+Zabbix通过B/S模式实现Web管理
+
+Zabbix监控拓扑
+
+控服务器
+
+监控服务器可以通过SNMP或者Agent采集数据
+数据可以写入MySQL,Oracle等数据库中
+服务器使用LNMP实现web前端的管理
+被监控主机
+
+被监控主机需要安装Agent
+常见的网络设备一般支持SNMP
+
+
+
+在这里插入图片描述
+一: 部署Zabbix监控平台
+
+步骤一：部署监控服务器
+1）安装LNMP环境
+Zabbix监控管理控制台需要通过Web页面展示出来，并且还需要使用MySQL来存储数据，因此需要先为Zabbix准备基础LNMP环境。
+[root@zabbixserver ~]# yum -y install gcc pcre-devel  openssl-devel
+[root@zabbixserver ~]# tar -xf nginx-1.12.2.tar.gz
+[root@zabbixserver ~]# cd nginx-1.12.2
+[root@zabbixserver nginx-1.12.2]# ./configure --with-http_ssl_module
+[root@zabbixserver nginx-1.12.2]# make && make install
+[root@zabbixserver ~]# yum -y install php php-mysql mariadb mariadb-devel mariadb-server
+[root@zabbixserver ~]# yum -y  install  php-fpm-5.4.16-42.el7.x86_64.rpm
+
+2）修改Nginx配置文件
+配置Nginx支持PHP动态网站，因为有大量PHP脚本需要执行，因此还需要开启Nginx的各种fastcgi缓存，加速PHP脚本的执行速度。
+
+[root@zabbixserver ~]# vim /usr/local/nginx/conf/nginx.conf
+… …
+http{
+… …
+    fastcgi_buffers 8 16k;                      //缓存php生成的页面内容，8个16k
+    fastcgi_buffer_size 32k;                      //缓存php生产的头部信息
+    fastcgi_connect_timeout 300;                 //连接PHP的超时时间
+    fastcgi_send_timeout 300;                     //发送请求的超时时间
+    fastcgi_read_timeout 300;                        //读取请求的超时时间
+location ~ \.php$ {
+                root           html;
+                fastcgi_pass   127.0.0.1:9000;
+                fastcgi_index  index.php;
+                include        fastcgi.conf;
+        }
+… …
+3）启动服务
+启动Nginx、PHP-FPM、MariaDB服务，关闭SELinux与防火墙。
+[root@zabbixserver ~]# systemctl start  mariadb
+[root@zabbixserver ~]# systemctl start  php-fpm
+[root@zabbixserver ~]# ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
+[root@zabbixserver ~]# nginx
+[root@zabbixserver ~]# firewall-cmd --set-default-zone=trusted
+[root@zabbixserver ~]# setenforce 0
+
+
+4）客户端测试LNMP环境
+服务器创建PHP测试页面，浏览器访问页面测试网页连通性。
+[root@zabbixserver ~]# cat /usr/local/nginx/html/test.php
+<?php
+$i=33;
+echo $i;
+?>
+[root@zabbixserver ~]# curl http://192.168.2.5/test.php
+
+步骤二：部署监控服务器Zabbix Server
+
+1）源码安装Zabbix Server
+
+[root@zabbixserver ]# yum -y install  net-snmp-devel curl-devel //安装相关依赖包
+[root@zabbixserver ]# yum -y install   libevent-devel-2.0.21-4.el7.x86_64.rpm
+[root@zabbixserver ]# tar -xf zabbix-3.4.4.tar.gz
+[root@zabbixserver ]# cd zabbix-3.4.4/
+[root@zabbixserver ]# ./configure  --enable-server \
+> --enable-proxy --enable-agent --with-mysql=/usr/bin/mysql_config \
+> --with-net-snmp --with-libcurl
+// --enable-server 安装部署zabbix服务器端软件
+// --enable-agent  安装部署zabbix被监控端软件
+// --enable-proxy  安装部署zabbix代理相关软件
+// --with-mysql    配置mysql_config路径
+// --with-net-snmp 允许zabbix通过snmp协议监控其他设备
+// --with-libcurl  安装相关curl库文件，这样zabbix就可以通过curl连接http等服务，测试被监控主机服务的状态
+[root@zabbixserver zabbix-3.4.4]# make && make install
+
+
+2）初始化Zabbix
+创建数据库，上线Zabbix的Web页面
+
+[root@zabbixserver ~]# mysql
+mysql> create database zabbix character set utf8;
+//创建数据库，支持中文字符集
+mysql> grant all on zabbix.* to zabbix@'localhost' identified by 'zabbix';
+//创建可以访问数据库的账户与密码
+[root@zabbixserver ~]# cd /root/zabbix-3.4.4/database/mysql/
+[root@zabbixserver mysql]# mysql -uzabbix -pzabbix zabbix < schema.sql
+[root@zabbixserver mysql]# mysql -uzabbix -pzabbix zabbix < images.sql
+[root@zabbixserver mysql]# mysql -uzabbix -pzabbix zabbix < data.sql
+//刚刚创建是空数据库，zabbix源码包目录下，有提前准备好的数据
+//使用mysql导入这些数据即可（注意导入顺序）
+
+上线Zabbix的Web页面
+[root@zabbixserver ~]# cd lnmp_soft/zabbix-3.4.4/frontends/php/
+[root@zabbixserver php]# cp -r * /usr/local/nginx/html/
+[root@zabbixserver php]# chmod -R 777 /usr/local/nginx/html/*
+
+修改Zabbix_server配置文件，设置数据库相关参数，启动Zabbix_server服务
+
+[root@zabbixserver ~]# vim /usr/local/etc/zabbix_server.conf
+DBHost=localhost
+//数据库主机，默认该行被注释
+DBName=zabbix
+//设置数据库名称
+DBUser=zabbix
+//设置数据库账户
+DBPassword=zabbix
+//设置数据库密码，默认该行被注释
+LogFile=/tmp/zabbix_server.log    
+//设置日志，仅查看以下即可
+[root@zabbixserver ~]# useradd -s /sbin/nologin zabbix
+//不创建用户无法启动服务
+[root@zabbixserver ~]# zabbix_server                      //启动服务
+[root@zabbixserver ~]# ss -ntulp |grep zabbix_server     //确认连接状态，端口10051
+tcp LISTEN 0 128 *:10051 *:* users:(("zabbix_server",pid=23275,fd=4),("zabbix_server",pid=23274,fd=4)
+
+
+[root@zabbixserver ~]# vim /usr/local/etc/zabbix_agentd.conf
+Server=127.0.0.1,192.168.2.5                    //允许哪些主机监控本机
+ServerActive=127.0.0.1,192.168.2.5                //允许哪些主机通过主动模式监控本机
+Hostname=zabbix_server                        //设置本机主机名
+LogFile=/tmp/zabbix_server.log                    //设置日志文件
+UnsafeUserParameters=1                        //是否允许自定义key
+[root@zabbixserver ~]# zabbix_agentd            //启动监控agent
+[root@zabbixserver ~]# ss -ntulp |grep zabbix_agentd   //查看端口信息为10050
+tcp    LISTEN     0      128       *:10050                 *:*  \                 
+>  users:(("zabbix_agentd",pid=23505,fd=4),("zabbix_agentd",pid=23504,fd=4)
+
+提示：如果是因为配置文件不对，导致服务无法启动时，不要重复执行zabbix_agentd，
+一定要先使用killall zabbix_agentd关闭服务后，再重新启动一次。
+浏览器访问Zabbix_server服务器的Web页面
+[root@zabbixserver ~]# firefox http://192.168.2.5/index.php
+//第一次访问，初始化PHP页面会检查计算机环境是否满足要求，如果不满足会给出修改建议
+//默认会提示PHP的配置不满足环境要求，需要修改PHP配置文件
+
+根据错误提示，修改PHP配置文件，满足Zabbix_server的Web环境要求
+[root@zabbixserver ~]# yum -y install  php-gd php-xml
+[root@zabbixserver ~]# yum install php-bcmath-5.4.16-42.el7.x86_64.rpm  
+[root@zabbixserver ~]# yum install php-mbstring-5.4.16-42.el7.x86_64.rpm
+[root@zabbixserver ~]# vim /etc/php.ini
+date.timezone = Asia/Shanghai                //设置时区
+max_execution_time = 300                    //最大执行时间，秒
+post_max_size = 32M                        //POST数据最大容量
+max_input_time = 300                        //服务器接收数据的时间限制
+memory_limit = 128M                        //内存容量限制
+[root@zabbixserver ~]# systemctl restart php-fpm
+
+
+步骤三：部署被监控主机Zabbix Agent
+ yum -y install httpd  提供Web页面服务
+1）源码安装Zabbix agent软件
+在2.100和2.200做相同操作（以zabbixclient_web1为例）。
+[root@zabbixclient_web1 ~]# useradd -s /sbin/nologin  zabbix
+[root@zabbixclient_web1 ~]# yum -y install gcc pcre-devel
+[root@zabbixclient_web1 ~]# tar -xf zabbix-3.4.4.tar.gz 
+[root@zabbixclient_web1 ~]# cd zabbix-3.4.4/
+[root@zabbixclient_web1 zabbix-3.4.4]# ./configure --enable-agent
+[root@zabbixclient_web1 zabbix-3.4.4]# make && make install 
+
+
+
+2）修改agent配置文件，启动Agent
+[root@zabbixclient_web1 ~]# vim /usr/local/etc/zabbix_agentd.conf
+Server=127.0.0.1,192.168.2.5                //谁可以监控本机（被动监控模式）
+ServerActive=127.0.0.1,192.168.2.5            //谁可以监控本机（主动监控模式）
+Hostname=zabbixclient_web1                    //被监控端自己的主机名
+EnableRemoteCommands=1    
+//监控异常后，是否允许服务器远程过来执行命令，如重启某个服务
+UnsafeUserParameters=1                                 //是否允许自定义key监控
+[root@zabbixclient_web1 ~]# zabbix_agentd                //启动agent服务
+
+
+3）拷贝启动脚本（非必须操作，可选做），有启动脚本可以方便管理服务，启动与关闭服务。启动脚本位于zabbix源码目录下。
+[root@zabbixclient_web1 zabbix-3.4.4]# cd misc/init.d/fedora/core
+[root@zabbixclient_web1 zabbix-3.4.4]# cp zabbix_agentd /etc/init.d/
+[root@zabbixclient_web1 zabbix-3.4.4]# /etc/init.d/zabbix_agentd start
+[root@zabbixclient_web1 zabbix-3.4.4]# /etc/init.d/zabbix_agentd stop
+[root@zabbixclient_web1 zabbix-3.4.4]# /etc/init.d/zabbix_agentd status
+[root@zabbixclient_web1 zabbix-3.4.4]# /etc/init.d/zabbix_agentd restart
+
+
+二:配置及使用Zabbix监控系统
+步骤一:添加监控主机
+浏览器登录网址,通过Configuration(配置)----->HOST(主机)--->Create Host(创建主机) 添加被监控Linux主机
+添加被监控主机时，需要根据提示输入被监控Linux主机的主机名称（最好与电脑的主机名一致，但也允许不一致）、主机组、
+IP地址等参数
+
+步骤二 :为被监控主机添加监控模块
+
+Zabbix通过监控摸版对监控对象实施具体的监控功能,能根据摸版定义需要监控哪些数据,对于LInux服务器的监控,Zabbix已
+经内置了
+相关的模板(Tempalte OS Linux),选择模板并链接到主机
+
+步骤三 :查看监控数据
+查看监控数据,登录Zabbix Web控制台,点击Monitoring(监控中)---->Latest(最新数据),通过过滤器中填写过滤条件,根
+据监控组和监控主机选择需要查看哪些监控数据
+
+
+三:自定义Zabbix监控项目
+自定义key语法格式为：UserParameter=自定义key名称,命令。
+
+[root@zabbixclient_web1 ~]# vim /usr/local/etc/zabbix_agentd.conf
+265行:Include=/usr/local/etc/zabbix_agentd.conf.d/                //加载配置文件目录
+280行:UnsafeUserParameters=1                                      //启用自定义Key
+
+[root@zabbixclient_web1 ~]# cd /usr/local/etc/zabbix_agentd.conf.d/
+[root@zabbixclient_web1 zabbix_agentd.conf.d]# vim count.line.passwd.conf
+UserParameter=count.line.passwd,wc -l /etc/passwd | awk ' {print $1} '
+ //自定义key语法格式:         //UserParameter=自定义key名称,命令
+
+2）测试自定义key是否正常工作
+
+killall zabbix_agentd
+zabbix_agentd  //重启agent服务
+zabbix_get -s 127.0.0.1 -k count.line.passwd //测试
+
+注意：如zabbix_get命令执行错误，提示Check access restrictions in Zabbix agent configuration，
+则需要检查agent配置文件是否正确：
+[root@zabbixclient_web1 ~]# vim /usr/local/etc/zabbix_agentd.conf
+Server=127.0.0.1,192.168.2.5  //后面追加监控主机ip
+ServerActive=127.0.0.1,192.168.2.5
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
