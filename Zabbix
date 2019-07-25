@@ -261,11 +261,35 @@ killall zabbix_agentd
 zabbix_agentd  //重启agent服务
 zabbix_get -s 127.0.0.1 -k count.line.passwd //测试
 
+创建监控摸版
+配置--->摸版----->创建摸版---->设置模班名称(Template name Visible name)与组名称(New group)
+
+
 注意：如zabbix_get命令执行错误，提示Check access restrictions in Zabbix agent configuration，
 则需要检查agent配置文件是否正确：
 [root@zabbixclient_web1 ~]# vim /usr/local/etc/zabbix_agentd.conf
 Server=127.0.0.1,192.168.2.5  //后面追加监控主机ip
 ServerActive=127.0.0.1,192.168.2.5
+
+
+
+
+Zabbix报警
+自定义的监控项默认不会自动报警;首页也不会提示错误;需要配置触发器与报警动作才可以自动报警
+
+触发器:表达式,比如内存不足300M,用户超过30个等;触发条件发生后,会导致一个触发事件;触发事件会执行某个动作
+
+动作:触发器被条件被触发后的行为;可以发送邮件,也可以重启某个服务
+
+1.创建触发器步骤 配置--->模板--->触发器
+2.创建动作步骤 设置邮件服务器 
+2.1指定邮件服务器 管理--->报警媒介类型
+2.2管理--->报警媒介
+邮件软件包 postfix   mail 
+写入邮件命令 mail -s 'bbb' zabbix < /etc/hosts
+
+
+
 
 
 
