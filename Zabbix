@@ -291,17 +291,48 @@ Zabbix报警
 2.3登录管理页面创建动作:配置--->动作---旁边操作
 2.4.效果测试: 在被监控主机创建账户,登陆监控端Web页面,在仪表盘中查看问题(监测中--仪表板--问题),并收到邮件
 
+Zabbix自动发现(Discovery)流程 :配置--->动作(事件源-自动发现)-->创建动作(ip范围)-->名称-->范围192.168.2.200-254
+--->操作-->操作类型(添加到主机群组和与模板链接)--->选tmp
+
+
+主被动监控 :主动和被动都是对被监控端主机而言
+zabbix默认采用的事被动监控
+被动监控  sever(发送监控key)--->Agent(接受请求)
+主动监控  Agent(发送请求需要检测的项目列表)---->sever(响应Agent发送items列表)--->Agent确认监控列表,tcp连接完成
+两者区别:server不用每次需要数据都连接Agent,Agent会自己手机并处理数据,server仅需要保存数据即可
+
+ 1.安装源码zabbix  yum -y install gcc pcre-devel
+                  tar -xf zabbix-3.4.4.tar.gz 
+                  cd zabbix-3.4.4/ 
+                   ./configure --enable-agent
+
+ 93行注释 #Server=127.0.0.1  
+               118行 StartAgents=0  //禁止被动监控(有服务进程没有端口)
+               134行 ServerActive=192.168.2.5:10051 //监控服务器ip,一定要取消127.0.0.1
+               145行 Hostname=web201  //告诉监控服务器,指定是谁发的数据要和zabbix服务器配置的监控主机名称一致
+               183行 RefreshActiveChecks=120  //默认120秒检测
+
+3.启动服务        useradd zabbix  //创建用户
+                  zabbix_agentd   //开启服务
+                 
+
+ 
+4.查看服务信息
+ 
+      ps -C zabbix_agentd //查看zabbix进程,不显示端口
+      
+      
+     . 配置服务器
+   
+   1.克隆模板 配置--->--->模板--->Templates--->选择Template OS Liunx--->  全克隆
+   2.修改监控项模式 3.添加克隆主机 4.为主机添加模板 5.查看数据图表
 
 
 
-
-
-
-
-
-
-
-
+3监控脚本 在客户端编写监控脚本 给服务器调用
+   3.1监控nginx服务状态
+   3.2监控网络连接状态
+   
 
 
 
