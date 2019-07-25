@@ -88,7 +88,9 @@ location ~ \.php$ {
 [root@zabbixserver ~]# systemctl start  mariadb
 [root@zabbixserver ~]# systemctl start  php-fpm
 [root@zabbixserver ~]# ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
-[root@zabbixserver ~]# nginx
+[root@zabbixserver ~]# nginx​
+310
+2.修改配置文件  
 [root@zabbixserver ~]# firewall-cmd --set-default-zone=trusted
 [root@zabbixserver ~]# setenforce 0
 
@@ -304,16 +306,16 @@ zabbix默认采用的事被动监控
  1.安装源码zabbix  yum -y install gcc pcre-devel
                   tar -xf zabbix-3.4.4.tar.gz 
                   cd zabbix-3.4.4/ 
-                   ./configure --enable-agent
-
- 93行注释 #Server=127.0.0.1  
+                  ./configure --enable-agent
+2.修改配置文件
+               93行注释 #Server=127.0.0.1  
                118行 StartAgents=0  //禁止被动监控(有服务进程没有端口)
                134行 ServerActive=192.168.2.5:10051 //监控服务器ip,一定要取消127.0.0.1
                145行 Hostname=web201  //告诉监控服务器,指定是谁发的数据要和zabbix服务器配置的监控主机名称一致
                183行 RefreshActiveChecks=120  //默认120秒检测
 
-3.启动服务        useradd zabbix  //创建用户
-                  zabbix_agentd   //开启服务
+3.启动服务       useradd zabbix  //创建用户
+                zabbix_agentd   //开启服务
                  
 
  
@@ -322,18 +324,78 @@ zabbix默认采用的事被动监控
       ps -C zabbix_agentd //查看zabbix进程,不显示端口
       
       
-     . 配置服务器
+ 配置服务器
    
-   1.克隆模板 配置--->--->模板--->Templates--->选择Template OS Liunx--->  全克隆
-   2.修改监控项模式 3.添加克隆主机 4.为主机添加模板 5.查看数据图表
+   1.克隆模板      配置--->模板--->Templates--->选择Template OS Liunx--->  全克隆
+   2.修改监控项模式  配置--->Templates--->选择新克隆的模板,点击监控项--->点击全选,点击批量更新--->
+   将类型改为Active主动模式 --->点击类型排序-->把不支持主动模式的监控项关闭
+   3.添加监控主机:  配置--->主机---->创建主机A-->添加名称A,组Linux serers,IP地址为0.0.0.0,端口为0
+   4.为主机添加监控模板 配置--->新创建的模板(主动模式)--->添加链接模板到主机Template OS Linux SErbver Active 
+   5.查看数据图表 监测中--->图形--->添加群组名称,主机名称,图形CPU load
 
 
 
 3监控脚本 在客户端编写监控脚本 给服务器调用
    3.1监控nginx服务状态
-   3.2监控网络连接状态
-   
+    yum -y install gcc pcre-devel
+    cd zabbix-3.4.4/
+    ./configure --enable-agent
+    make install
+ vim /usr/local/etc/zabbix_agentd.conf
+  93行去掉注释 Server=127.0.0.1,192.168.2.5
+ 265行Include=/usr/local/etc/zabbix_agentd.conf.d/*.conf 去掉注释
+ 134行ServerActive=192.168.2.5:10051 //监控服务器ip,一定要取消127.0.0.1
+ 280行UnsafeUserParameters=1 开启使用自定义脚本
 
+ useradd zabbix
+ zabbix_agentd 
+ ss -antup | grep 10050
+
+yum -y install zlib-devel //安装nginx依赖包
+tar -xf nginx-1.12.2.tar.gz   
+cd nginx-1.12.2/
+./configure --with-http_stub_status_module
+make && make install
+
+vim /usr/local/nginx/conf/nginx.conf
+ server {
+
+       location /status{   //定义访问目录名,启用状态页面模块
+          stub_status on;
+      }
+
+        listen       80;
+        server_name  localhost;
+ 
+ /usr/local/nginx/sbin/nginx -t //检测nginx配置文件是否正确
+ /usr/local/nginx/sbin/nginx   //起nginx服务
+
+curl http://localhost/status
+Active connections: 1 
+server accepts handled requests
+ 70 70 20 
+Reading: 0 Writing: 1 Waiting: 0 
+
+自定义key
+vim /usr/local/nginx/bin/ngin_status.sh
+cas $1 in
+"Active")
+curl -s http://localhost/status | awk 'NR==1{print $3}';; //实时请求数量
+"accepts")
+curl -s http://localhost/status | awk 'NR==3{print $1}';; //取累计请求数量
+"Waiting")
+curl -s http://localhost/status | awk 'NR==4{print $6}' //等待请求数量                                                     //等待网站请求数量  
+ esac
+chmod +x /usr/local/nginx/bin/ngin_status.sh
+
+cd /usr/local/etc/zabbix_agentd.conf.d/
+vim x.conf
+UserParameter=nginx_statu[*],/usr/local/bin/nginx_status.sh $1
+killall -9 zabbix_agentd
+
+3.2监控网络连接状态
+   
+zabbix_get -s 127.0.0.1 -p 10050 -k nginx_statu[Waiting]
 
 
 
