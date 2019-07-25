@@ -8,14 +8,14 @@
 
 系统监控软件可以使用：系统自带的命令、Cacti监控系统、Nagios监控系统、Zabbix监控系统。
  
- 监控命令:进程监控 ps top  网络监控 ifconfig netstat或ss ping traceroute 
+监控命令:进程监控 ps top  网络监控 ifconfig netstat或ss ping traceroute 
          存储监控  free swapon -s df -h
   
- 性能监控的常用的性能监控命令: uptime cpu负载  mpastat 查看cpu状态  vmstat查看内存状态
- iostat查看硬盘转台  netstat 查看网络状态 sar查看以上四类信息
+性能监控的常用的性能监控命令: uptime cpu负载  mpastat 查看cpu状态  vmstat查看内存状态
+iostat查看硬盘转台  netstat 查看网络状态 sar查看以上四类信息
  
- 自动化监控系统
- Nagios
+自动化监控系统
+Nagios
 基于Agent监控,强大的状态检查与报警机制
 插件极多,自己写监控脚本到Nagios非常方便
 
