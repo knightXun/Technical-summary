@@ -1,0 +1,214 @@
+一 数据库服务基础
+常见软件
+主流操作系统:Unix ,Linux ,Windows
+软件名         开源         跨平台    厂商
+Oracle        否            是      甲骨文
+MySQL         是            是      甲骨文
+SQL Server    否            否       微软
+DB2           否            是       IBM
+Redis         是            是       开源软件
+Memcache      是            是       开源软件
+MongoDB       是            是       开源软件
+
+MySQL数据库特点与应用
+特点
+1)适用于中小规模,关系型数据库系统
+2)支持Linux,Unix,Windows等多种操作系统
+3)支持Python,Java,perl,PHP等编程语言
+典型应用环境
+1)LAMP平台,与Apache HTTP Server组合
+2)LNMP平台,与Nginx组合
+
+构建MYSQL服务器
+
+安装软件
+官网http://dev.mysql.com
+mysql-community-client           客户端应用程序
+mysql-community-common           数据库和客户端库共享文件 
+mysql-community-devel            客户端应用程序的库和头文件
+mysql-community-enmbedded         嵌入式函数库
+mysql-community-enmbedded-compat  嵌入式兼容函数库
+mysql-community-enmbedded-devel    头文件和库文件作为Mysql的嵌入式库文件
+mysql-community-libs               Mysql数据库客户端应用程序的共享库
+mysql-community-libs-compat        客户端应用程序的共享兼容库
+
+yum -y install mysql-community-*.rpm 安装8个软件包
+
+相关参数
+文件                         说明
+/etc/my.conf                主配置文件
+/var/lib/mysql              数据库目录
+默认端口号                    3306
+进程名                        mysqld
+传输协议                       TCP
+进程所有者                     mysql
+进程所属主                     mysql
+错误日志文件                    /var/log/mysqld.log
+
+
+初始密码登录
+      连接命令 mysql -h数据库地址   -u用户     -p密码
+      grep 'password' /var/log/mysqld.log   查看随机密码
+
+
+修改root密码              
+ alter user root@'localhost'  identified by '密码';
+
+                         
+修改密码策略 
+show variables like "%password%";        查看变量
+set global validate_password_policy=0;   修改密码策略
+set global varlidate_password_length=6;  修改密码长度
+
+create database 库名 character set utf8mb4  创建数据库,支持中文字符集
+
+vim /etc/my.conf                         永久配置
+[mysqld]
+validate_password_policy=0
+varlidate_password_length=6
+:wq
+
+
+数据库基本管理
+连接方式
+客户端连接MySQL服务的方法
+1.命令行
+2.web页面
+3.安装图形软件
+4.编写脚本(php,JAVa,python...)
+使用mysql命令
+ mysql -h数据库ip  -u用户名     -p密码 [数据库名]
+ 
+ 数据存储流程
+ 客户端把数据存储到数据库服务器上的步骤
+ 1.连接数据库服务器
+ 2.建库              //类似于文件夹
+ 3.建表              //类似与文件
+ 4.插入记录           //类似于文件内容
+ 5.断开连接
+ 
+ 
+常用的SQL命令分类:
+DDL数据定义语言(create,alter,drop)
+DML数据操作语言(insert,update,delete)
+DCL数据控制语言(grant,revoke)
+DTL 数据事务语言(commit,rollback,savepoint) 
+ 
+ 
+ 
+ 库管理命令
+ 库 类似于文件夹,用来存储表
+ show databases;         显示已有的库
+ select  user();         显示连接用户
+ use 库名;                切换库
+ select database();       显示当前所在的库
+ create daytabase 库名;   创建新库
+ show tables;             显示已有的表
+ drop database 库名;       删除库
+
+ 数据据库命名规则
+(数字、字母、下划线,不能纯数字;区分大小写;不能使用关键词或特殊符号)                  
+
+建表
+create table 库名.表名(
+字段名1 类型(宽度),
+字段名2 类型(宽度),
+)default charset=utf8;
+
+desc 库名.表名;        查看表名
+drop table 库名.表名;  删除表
+
+
+MySQL数据类型
+信息种类
+数值型:身高,体重
+字符型:姓名,工作单位
+枚举型:兴趣爱好,性别
+日期时间型:出生日期
+
+字符类型
+定长:char(字符个数)
+最大字符个数255;不够指定字符个数时在右边用空格补全;字符个数超出时,无法写入数据
+
+变长:varchar(字符个数)
+按数据实际大小分配存储空间;字符个数超出时,无法写入数据
+
+大文本类型:text/blob
+字符数大于65535存储时使用
+
+整数型       有符号类型            无符号类型
+int 大整数 -2^31~2^31-1          0~2^32-1
+unsigned    使用无符号从存储范围
+
+浮点型
+格式1:字段名  类型;                 create table db1.t3(pay float,iddouble);
+格式二:字段名 类型(总宽度,小数位数)    create table db1.t4(pay float(5,2)id double(4,2));
+
+类型         名称          范围符号
+float       单精度         0~2^32-1
+double      双精度          0~2^64-1
+
+日期时间类型
+类型
+日期时间 datetime
+范围: 1000-01-01 00:00:00~9999-12-31 23:59:59
+格式:yyyymmddhhmmss
+
+
+
+练习如下时间函数的使用：
+now( ) 获取当前的系统日期和时间 
+year( ) 获取年
+month( ) 获取月
+day( )   获取日 
+date( ) 获取日期
+time( ) 获取时间
+curtime( ) 获取当前的系统时间
+curdate( ) 获取当前的系统日期
+
+1）使用now()查看当前的日期和时间
+mysql> SELECT now();
+
+2）使用curdate()获得当前的日期
+mysql> SELECT curdate();
+
+4）分别获取当前日期时间中的年份、月份、日
+mysql> SELECT year(now()) , month(now()) , day(now());
+
+6）获取系统日期
+mysql> select date(now());
+枚举类型
+enum 单选 
+set  多选
+ 
+mysql> create table db1.t5 (
+    -> name char(5),
+    -> likes set("eat","game","film","music"),
+    -> sex   enum("boy","girl","no")
+    -> );
+Query OK, 0 rows affected (0.04 sec)
+
+Mysql> 3）插入表记录
+
+mysql> 
+mysql> insert into db1.t5 values ("bob","eat,film,game","boy");
+Query OK, 1 row affected (0.03 sec)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
