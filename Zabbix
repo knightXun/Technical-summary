@@ -38,7 +38,7 @@ Zabbix通过B/S模式实现Web管理
 
 Zabbix监控拓扑
 
-控服务器
+监控服务器
 
 监控服务器可以通过SNMP或者Agent采集数据
 数据可以写入MySQL,Oracle等数据库中
@@ -50,8 +50,18 @@ Zabbix监控拓扑
 
 
 
-在这里插入图片描述
+
 一: 部署Zabbix监控平台
+1.1 问题
+部署一台Zabbix监控服务器，一台被监控主机
+    1.安装LNMP环境
+    2.源码安装Zabbix
+    3.安装监控端主机，修改基本配置
+    4.初始化Zabbix监控Web页面
+    5.修改PHP配置文件，满足Zabbix需求
+    6.安装被监控端主机，修改基本配置
+
+
 
 步骤一：部署监控服务器
 1）安装LNMP环境
@@ -72,10 +82,10 @@ Zabbix监控管理控制台需要通过Web页面展示出来，并且还需要�
 http{
 … …
     fastcgi_buffers 8 16k;                      //缓存php生成的页面内容，8个16k
-    fastcgi_buffer_size 32k;                      //缓存php生产的头部信息
-    fastcgi_connect_timeout 300;                 //连接PHP的超时时间
-    fastcgi_send_timeout 300;                     //发送请求的超时时间
-    fastcgi_read_timeout 300;                        //读取请求的超时时间
+    fastcgi_buffer_size 32k;                    //缓存php生产的头部信息
+    fastcgi_connect_timeout 300;                //连接PHP的超时时间
+    fastcgi_send_timeout 300;                   //发送请求的超时时间
+    fastcgi_read_timeout 300;                   //读取请求的超时时间
 location ~ \.php$ {
                 root           html;
                 fastcgi_pass   127.0.0.1:9000;
@@ -88,9 +98,8 @@ location ~ \.php$ {
 [root@zabbixserver ~]# systemctl start  mariadb
 [root@zabbixserver ~]# systemctl start  php-fpm
 [root@zabbixserver ~]# ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
-[root@zabbixserver ~]# nginx​
-310
-2.修改配置文件  
+[root@zabbixserver ~]# nginx
+  
 [root@zabbixserver ~]# firewall-cmd --set-default-zone=trusted
 [root@zabbixserver ~]# setenforce 0
 
@@ -121,17 +130,15 @@ echo $i;
 // --with-mysql    配置mysql_config路径
 // --with-net-snmp 允许zabbix通过snmp协议监控其他设备
 // --with-libcurl  安装相关curl库文件，这样zabbix就可以通过curl连接http等服务，测试被监控主机服务的状态
-[root@zabbixserver zabbix-3.4.4]# make && make install
+[root@zabbixserver zabbix-3.4.4]#  make install
 
 
 2）初始化Zabbix
 创建数据库，上线Zabbix的Web页面
 
 [root@zabbixserver ~]# mysql
-mysql> create database zabbix character set utf8;
-//创建数据库，支持中文字符集
-mysql> grant all on zabbix.* to zabbix@'localhost' identified by 'zabbix';
-//创建可以访问数据库的账户与密码
+mysql> create database zabbix character set utf8;   //创建数据库，支持中文字符集
+mysql> grant all on zabbix.* to zabbix@'localhost' identified by 'zabbix'; //创建可以访问数据库的账户与密码
 [root@zabbixserver ~]# cd /root/zabbix-3.4.4/database/mysql/
 [root@zabbixserver mysql]# mysql -uzabbix -pzabbix zabbix < schema.sql
 [root@zabbixserver mysql]# mysql -uzabbix -pzabbix zabbix < images.sql
@@ -140,37 +147,33 @@ mysql> grant all on zabbix.* to zabbix@'localhost' identified by 'zabbix';
 //使用mysql导入这些数据即可（注意导入顺序）
 
 上线Zabbix的Web页面
-[root@zabbixserver ~]# cd lnmp_soft/zabbix-3.4.4/frontends/php/
+[root@zabbixserver ~]# cd root/zabbix-3.4.4/frontends/php/
 [root@zabbixserver php]# cp -r * /usr/local/nginx/html/
 [root@zabbixserver php]# chmod -R 777 /usr/local/nginx/html/*
 
 修改Zabbix_server配置文件，设置数据库相关参数，启动Zabbix_server服务
 
 [root@zabbixserver ~]# vim /usr/local/etc/zabbix_server.conf
-DBHost=localhost
-//数据库主机，默认该行被注释
-DBName=zabbix
-//设置数据库名称
-DBUser=zabbix
-//设置数据库账户
-DBPassword=zabbix
-//设置数据库密码，默认该行被注释
-LogFile=/tmp/zabbix_server.log    
-//设置日志，仅查看以下即可
-[root@zabbixserver ~]# useradd -s /sbin/nologin zabbix
-//不创建用户无法启动服务
-[root@zabbixserver ~]# zabbix_server                      //启动服务
-[root@zabbixserver ~]# ss -ntulp |grep zabbix_server     //确认连接状态，端口10051
-tcp LISTEN 0 128 *:10051 *:* users:(("zabbix_server",pid=23275,fd=4),("zabbix_server",pid=23274,fd=4)
+DBHost=localhost                //数据库主机，默认该行被注释
+DBName=zabbix                   //设置数据库名称
+DBUser=zabbix                   //设置数据库账户
+DBPassword=zabbix               //设置数据库密码，默认该行被注释
+LogFile=/tmp/zabbix_server.log  //设置日志，仅查看以下即可
 
+[root@zabbixserver ~]# useradd -s /sbin/nologin zabbix    //不创建用户无法启动服务
+[root@zabbixserver ~]# zabbix_server                      //启动服务
+[root@zabbixserver ~]# ss -ntulp |grep zabbix_server      //确认连接状态，端口10051
+tcp LISTEN 0 128 *:10051 *:* users:(("zabbix_server",pid=23275,fd=4),("zabbix_server",pid=23274,fd=4)
+提示：如果是因为配置文件不对，导致服务无法启动时，不要重复执行zabbix_server，一定要先使用killall zabbix_server关闭服务后，
+再重新启动一次。修改Zabbix_agent配置文件，启动Zabbix_agent服务
 
 [root@zabbixserver ~]# vim /usr/local/etc/zabbix_agentd.conf
-Server=127.0.0.1,192.168.2.5                    //允许哪些主机监控本机
-ServerActive=127.0.0.1,192.168.2.5                //允许哪些主机通过主动模式监控本机
-Hostname=zabbix_server                        //设置本机主机名
-LogFile=/tmp/zabbix_server.log                    //设置日志文件
-UnsafeUserParameters=1                        //是否允许自定义key
-[root@zabbixserver ~]# zabbix_agentd            //启动监控agent
+ 30行LogFile=/tmp/zabbix_server.log                    //设置日志文件
+ 93行Server=127.0.0.1,192.168.2.5                      //允许哪些主机监控本机
+134行ServerActive=127.0.0.1,192.168.2.5                //允许哪些主机通过主动模式监控本机
+154行Hostname=zabbix_server                            //设置本机主机名
+280行UnsafeUserParameters=1                            //是否允许自定义key
+[root@zabbixserver ~]# zabbix_agentd                   //启动监控agent
 [root@zabbixserver ~]# ss -ntulp |grep zabbix_agentd   //查看端口信息为10050
 tcp    LISTEN     0      128       *:10050                 *:*  \                 
 >  users:(("zabbix_agentd",pid=23505,fd=4),("zabbix_agentd",pid=23504,fd=4)
@@ -178,6 +181,7 @@ tcp    LISTEN     0      128       *:10050                 *:*  \
 提示：如果是因为配置文件不对，导致服务无法启动时，不要重复执行zabbix_agentd，
 一定要先使用killall zabbix_agentd关闭服务后，再重新启动一次。
 浏览器访问Zabbix_server服务器的Web页面
+
 [root@zabbixserver ~]# firefox http://192.168.2.5/index.php
 //第一次访问，初始化PHP页面会检查计算机环境是否满足要求，如果不满足会给出修改建议
 //默认会提示PHP的配置不满足环境要求，需要修改PHP配置文件
@@ -194,6 +198,7 @@ max_input_time = 300                        //服务器接收数据的时间限�
 memory_limit = 128M                        //内存容量限制
 [root@zabbixserver ~]# systemctl restart php-fpm
 
+再次使用浏览器访问服务器，会出现图形登录zabbix界面
 
 步骤三：部署被监控主机Zabbix Agent
  yum -y install httpd  提供Web页面服务
@@ -204,19 +209,18 @@ memory_limit = 128M                        //内存容量限制
 [root@zabbixclient_web1 ~]# tar -xf zabbix-3.4.4.tar.gz 
 [root@zabbixclient_web1 ~]# cd zabbix-3.4.4/
 [root@zabbixclient_web1 zabbix-3.4.4]# ./configure --enable-agent
-[root@zabbixclient_web1 zabbix-3.4.4]# make && make install 
+[root@zabbixclient_web1 zabbix-3.4.4]#  make install 
 
 
 
 2）修改agent配置文件，启动Agent
 [root@zabbixclient_web1 ~]# vim /usr/local/etc/zabbix_agentd.conf
-Server=127.0.0.1,192.168.2.5                //谁可以监控本机（被动监控模式）
-ServerActive=127.0.0.1,192.168.2.5            //谁可以监控本机（主动监控模式）
-Hostname=zabbixclient_web1                    //被监控端自己的主机名
-EnableRemoteCommands=1    
-//监控异常后，是否允许服务器远程过来执行命令，如重启某个服务
-UnsafeUserParameters=1                                 //是否允许自定义key监控
-[root@zabbixclient_web1 ~]# zabbix_agentd                //启动agent服务
+ 93行Server=127.0.0.1,192.168.2.5               //谁可以监控本机（被动监控模式）
+134行ServerActive=127.0.0.1,192.168.2.5         //谁可以监控本机（主动监控模式）
+145行Hostname=zabbixclient_web1                 //被监控端自己的主机名
+ 69行EnableRemoteCommands=1                     //监控异常后，是否允许服务器远程过来执行命令，如重启某个服务
+280行UnsafeUserParameters=1                     //是否允许自定义key监控
+[root@zabbixclient_web1 ~]# zabbix_agentd       //启动agent服务
 
 
 3）拷贝启动脚本（非必须操作，可选做），有启动脚本可以方便管理服务，启动与关闭服务。启动脚本位于zabbix源码目录下。
@@ -228,7 +232,21 @@ UnsafeUserParameters=1                                 //是否允许自定义ke
 [root@zabbixclient_web1 zabbix-3.4.4]# /etc/init.d/zabbix_agentd restart
 
 
+
+***************************************************************************************************
 二:配置及使用Zabbix监控系统
+2.1 问题
+
+    1.监控CPU
+    2.监控内存
+    3.监控进程
+    4.监控网络流量
+    5.监控硬盘
+
+2.2 方案
+   通过Zabbix监控平台，添加被监控zabbixclient_web1主机（192.168.2.100）并链接监控模板即可，
+Zabbix默认模板就可以监控CPU、内存、进程、网络、磁盘等项目。
+
 步骤一:添加监控主机
 浏览器登录网址,通过Configuration(配置)----->HOST(主机)--->Create Host(创建主机) 添加被监控Linux主机
 添加被监控主机时，需要根据提示输入被监控Linux主机的主机名称（最好与电脑的主机名一致，但也允许不一致）、主机组、
@@ -237,16 +255,34 @@ IP地址等参数
 步骤二 :为被监控主机添加监控模块
 
 Zabbix通过监控摸版对监控对象实施具体的监控功能,能根据摸版定义需要监控哪些数据,对于LInux服务器的监控,Zabbix已
-经内置了
-相关的模板(Tempalte OS Linux),选择模板并链接到主机
+经内置了相关的模板(Tempalte OS Linux),选择模板并链接到主机
 
 步骤三 :查看监控数据
-查看监控数据,登录Zabbix Web控制台,点击Monitoring(监控中)---->Latest(最新数据),通过过滤器中填写过滤条件,根
+查看监控数据,登录Zabbix Web控制台,点击Monitoring(监测中)---->Latest(最新数据),通过过滤器中填写过滤条件,根
 据监控组和监控主机选择需要查看哪些监控数据
 
 
+
+************************************************************************************************
 三:自定义Zabbix监控项目
+
+
+3.1 问题 
+ 监控Linux服务器系统账户的数量。
+
+3.2方案
+需要使用Zabbix自定义key的方式实现自定义监控，参考如下操作步骤：
+
+    1. 创建自定义key
+    2.创建监控项目
+    3.创建监控图形
+    4.将监控模板关联到主机
+1）创建自定义key
+
 自定义key语法格式为：UserParameter=自定义key名称,命令。
+
+自定义的key文件一般存储在/usr/local/etc/zabbix_agentd.conf.d/目录，这里还需要修改zabbix_agentd.conf文件，
+允许自定义监控key，来读取该目录下的所有文件 。
 
 [root@zabbixclient_web1 ~]# vim /usr/local/etc/zabbix_agentd.conf
 265行:Include=/usr/local/etc/zabbix_agentd.conf.d/                //加载配置文件目录
@@ -255,28 +291,62 @@ Zabbix通过监控摸版对监控对象实施具体的监控功能,能根据摸�
 [root@zabbixclient_web1 ~]# cd /usr/local/etc/zabbix_agentd.conf.d/
 [root@zabbixclient_web1 zabbix_agentd.conf.d]# vim count.line.passwd.conf
 UserParameter=count.line.passwd,wc -l /etc/passwd | awk ' {print $1} '
- //自定义key语法格式:         //UserParameter=自定义key名称,命令
+ //自定义key语法格式:        
+ //UserParameter=自定义key名称,命令
 
 2）测试自定义key是否正常工作
 
-killall zabbix_agentd
-zabbix_agentd  //重启agent服务
-zabbix_get -s 127.0.0.1 -k count.line.passwd //测试
+[root@zabbixclient_web1 ~]# killall  zabbix_agentd
+[root@zabbixclient_web1 ~]# zabbix_agentd								//重启agent服务
+[root@zabbixclient_web1 ~]# zabbix_get -s 127.0.0.1 -k count.line.passwd
 
-创建监控摸版
-配置--->摸版----->创建摸版---->设置模班名称(Template name Visible name)与组名称(New group)
-
-
-注意：如zabbix_get命令执行错误，提示Check access restrictions in Zabbix agent configuration，
-则需要检查agent配置文件是否正确：
+注意：如zabbix_get命令执行错误，提示Check access restrictions in Zabbix agent configuration
+，则需要检查agent配置文件是否正确：
 [root@zabbixclient_web1 ~]# vim /usr/local/etc/zabbix_agentd.conf
-Server=127.0.0.1,192.168.2.5  //后面追加监控主机ip
+Server=127.0.0.1,192.168.2.5
 ServerActive=127.0.0.1,192.168.2.5
 
+步骤二：创建监控模板
+
+1)创建监控摸版
+配置--->摸版----->创建摸版---->设置模版名称(Template name Visible name)与组名称(New group)
+模板名称count_line.passwd
+可见名称count_line.passwd
+新的群组count-passwd
+2）创建应用
+创建完成模板后，默认模板中没有任何应用、项目、触发器、图形等资源。这里需要点击模板后面的Application（应用集）
+链接打开创建应用的页面
+点击Application（应用集）---> 点击Create application（创建应用集）按钮--->设置应用名称
+
+3）创建监控项目item（监控项）
+与创建应用一样，在模板中还需要创建监控项目，并在刷新出的新页面中选择Create items（创建监控项）
+创建项目,接下来，还需要给项目设置名称及对应的自定义key,
+
+4）创建图形
+
+为了后期可以通过图形的方式展示监控数据，还需要在模板中创建图形，设置方法与前面的步骤一致，在监控模板
+后面点击Graph（图形）即可创建图形，设置监控图形基于什么监控数据.
+
+5）将模板链接到被监控主机
+
+将完整的监控模板制作完成后，就可以将模板链接到主机实现监控功能了。首先找到被监控主机Configuration（配置）
+-->Hosts（主机）点击需要的被监控主机链接，打开监控主机设置页面，在Template（模板）页面中选择需要链接到该
+主机的模板，在此选择刚刚创建的模板count_line.passwd添加即可
+
+6）查看监控数据图形
+
+点击Monitoring（监控中）-->Craphs（图形），根据需要选择条件，查看监控图形
+
+***********************************************************************************************
 
 
+四 实现Zabbix报警功能
+4.1问题
+    1.监控Linux服务器系统账户
+    2.创建Media，设置邮件服务器及收件人邮箱
+    3.当系统账户数量超过26人时发送报警邮件
 
-Zabbix报警
+4.2 方案
 自定义的监控项默认不会自动报警;首页也不会提示错误;需要配置触发器与报警动作才可以自动报警
 
 触发器:表达式,比如内存不足300M,用户超过30个等;触发条件发生后,会导致一个触发事件;触发事件会执行某个动作
@@ -286,70 +356,217 @@ Zabbix报警
 邮件软件包 postfix   mail 
 写入邮件命令 mail -s 'bbb' zabbix < /etc/hosts
 
-1.创建触发器步骤:配置--->模板--->触发器
-2.创建动作步骤 (设置邮件服务器) 
-2.1登陆管理页面指定邮件服务器 :管理--->报警媒介类型
+参考如下操作步骤：
+
+    1.创建触发器并设置标记
+    2.设置邮箱
+    3.创建Action动作
+
+
+步骤一：创建触发器规则
+1)创建触发器步骤:配置--->模板--->触发器 
+创建触发器时需要定义表达式，触发器表达式（Expression）是触发异常的条件，触发器表达式格式如下：
+{<server>:<key>.<function>(<parameter>)}<operator><constant>
+{主机：key.函数(参数)}<表达式>常数
+在蓝色方框中编写触发器表达式，可以直接手写，也可以通过add选择表达式模板。
+
+步骤二：设置邮件
+1)创建Media
+ 通过Administration（管理）-->Media Type（报警媒体类型）-->选择Email（邮件）-->
+ 设置邮件服务器信息，设置邮件服务器及邮件账户信息.
 2.2陆管管理页面为账户添加Media(指定收件人) :管理--->用户--->报警媒介
-2.3登录管理页面创建动作:配置--->动作---旁边操作
+
+步骤三：创建Action动作
+Action（动作）是定义当触发器被触发时的时候，执行什么行为。
+通过Configuration配置--->(动作)--->Create action（创建动作）
+
+2）配置Action动作的触发条件
+
+填写Action动作的名称，配置什么触发器被触发时会执行本Action动作（账户数量大于26）
+
+3）配置Action动作的具体行为
+
+配置动作的具体操作行为（发送信息或执行远程命令），无限次数发送邮件，60秒1次，发送给Admin用户
+
 2.4.效果测试: 在被监控主机创建账户,登陆监控端Web页面,在仪表盘中查看问题(监测中--仪表板--问题),并收到邮件
 
 Zabbix自动发现(Discovery)流程 :配置--->动作(事件源-自动发现)-->创建动作(ip范围)-->名称-->范围192.168.2.200-254
 --->操作-->操作类型(添加到主机群组和与模板链接)--->选tmp
 
 
-主被动监控 :主动和被动都是对被监控端主机而言
-zabbix默认采用的事被动监控
+*************************************************************************************************
+
+
+五 Zabbix自动发现
+5.1问题
+    1.创建自动发现规则
+    2.创建自动发现后的动作，添加主机、为主机链接模板
+
+5.2 方案
+
+什么是自动发现（Discovery）？
+
+当Zabbix需要监控的设备越来越多，手动添加监控设备越来越有挑战，此时，可以考虑使用自动发现功能，自动添加被监控主机，
+实现自动批量添加一组监控主机功能。
+
+自动发现可以实现：
+
+    自动发现、添加主机，自动添加主机到组；
+    自动连接模板到主机，自动创建监控项目与图形等。
+
+自动发现（Discovery）流程：
+
+    创建自动发现规则
+    创建Action动作，说明发现主机后自动执行什么动作
+    通过动作，执行添加主机，链接模板到主机等操作
+
+5.3 步骤
+
+实现此方案需要按照如下步骤进行。
+
+步骤一：自动发现规则
+
+1）创建自动发现规则
+
+通过Configuration（配置）-->Discovery（自动发现）-->Create discovery rule（创建发现规则）
+
+
+2）填写规则
+
+填写自动发现的IP范围（逗号隔开可以写多个），多久做一次自动发现（默认为1小时，仅实验修改为1m）。
+配置检查的方式：Ping、HTTP、FTP、Agent的自定义key等检查
+
+步骤二：创建动作
+
+1）创建Action动作
+
+通过Configuration（配置）--> Actions Event source(事件源)：自动发现(Discovery)-->
+Create action（创建动作）。
+
+2）配置Action动作具体行为
+
+配置动作，添加动作名称，添加触发动作的条件,点击操作（触发动作后要执行的操作指令），
+操作细节：添加主机到组，与模板链接（HTTP模板）.
+
+步骤二：添加新的虚拟机
+
+1）创建新的虚拟机（启动HTTP服务器）
+
+创建一台新的主机，验证zabbix是否可以自动发现该主机，可以重新部署一台新的虚拟机虚拟机zabbixclient_web2，
+安装部署Zabbix agent。
+
+
+
+2）验证结果
+
+登陆Zabbix服务器的Web页面，查看主机列表，确认新添加的主机是否被自动加入监控主机列表，是否自动绑定了监控模板。
+
+*************************************************************************************************
+
+
+六:Zabbix主动监控
+6.1问题
+    1.修改被监控主机agent为主动监控模式
+    2.克隆模板，修改模板为主动监控模板
+    3.添加监控主机，并链接主动监控模板
+
+6.2方案
+
+zabbix默认采用的是被动监控,主动和被动都是对被监控端主机而言
 被动监控  sever(发送监控key)--->Agent(接受请求)
 主动监控  Agent(发送请求需要检测的项目列表)---->sever(响应Agent发送items列表)--->Agent确认监控列表,tcp连接完成
 两者区别:server不用每次需要数据都连接Agent,Agent会自己手机并处理数据,server仅需要保存数据即可
 
+步骤一：添加被监控主机
+1）为被监控主机安装部署zabbix agent
  1.安装源码zabbix  yum -y install gcc pcre-devel
                   tar -xf zabbix-3.4.4.tar.gz 
                   cd zabbix-3.4.4/ 
                   ./configure --enable-agent
-2.修改配置文件
-               93行注释 #Server=127.0.0.1  
-               118行 StartAgents=0  //禁止被动监控(有服务进程没有端口)
-               134行 ServerActive=192.168.2.5:10051 //监控服务器ip,一定要取消127.0.0.1
-               145行 Hostname=web201  //告诉监控服务器,指定是谁发的数据要和zabbix服务器配置的监控主机名称一致
-               183行 RefreshActiveChecks=120  //默认120秒检测
+                  make install 
+2.修改agent配置文件,将agent监控模式修改为主动模式.
+               93行注释 #Server=127.0.0.1               谁可以监控本机(被动监控模式)
+               118行 StartAgents=0                     被动监控时启动多个进程;禁止被动监控(有服务进程没有端口)
+               134行 ServerActive=192.168.2.5:10051    监控服务器ip,一定要取消127.0.0.1
+               145行 Hostname=被监控主机端自己的主机名     告诉监控服务器,指定是谁发的数据要和zabbix服务器配置的监控主机名称一致
+               183行 RefreshActiveChecks=120           默认120秒检测
+               280行 UnsafeUserParameters=1		          允许自定义key
+               265行 Include=/usr/local/etc/zabbix_agentd.conf.d/*.conf
+               killall zabbix_agentd		                 关闭服务
+               zabbix_agentd							                    启动服务
 
-3.启动服务       useradd zabbix  //创建用户
+3.启动服务       
+
+
+                useradd zabbix  //创建用户
                 zabbix_agentd   //开启服务
                  
 
- 
 4.查看服务信息
  
       ps -C zabbix_agentd //查看zabbix进程,不显示端口
       
-      
+ 步骤二：创建主动监控的监控模板    
  配置服务器
-   
-   1.克隆模板      配置--->模板--->Templates--->选择Template OS Liunx--->  全克隆
-   2.修改监控项模式  配置--->Templates--->选择新克隆的模板,点击监控项--->点击全选,点击批量更新--->
+   1）克隆Zabbix自动的监控模板
+   Configuration（配置) --->模版(Templates)--->选择Template OS Liunx--
+   -->全克隆,克隆该模板，新建一个新的模板。
+   2)修改监控项模式  配置--->Templates(模板)--->选择新克隆的模板,点击监控项(items)--->点击全选,点击批量更新--->
    将类型改为Active主动模式 --->点击类型排序-->把不支持主动模式的监控项关闭
-   3.添加监控主机:  配置--->主机---->创建主机A-->添加名称A,组Linux serers,IP地址为0.0.0.0,端口为0
-   4.为主机添加监控模板 配置--->新创建的模板(主动模式)--->添加链接模板到主机Template OS Linux SErbver Active 
+   
+   步骤三
+   1)添加监控主机:  配置--->主机---->创建主机A-->添加名称A,组Linux serers,IP地址为0.0.0.0,端口为0
+   2)为主机添加监控模板 配置--->新创建的模板(主动模式)--->添加链接模板到主机Template OS Linux SErbver Active 
    5.查看数据图表 监测中--->图形--->添加群组名称,主机名称,图形CPU load
 
+****************************************************************************************
+七: 拓扑图与聚合图形
+7.1问题
+    1.创建修改拓扑图
+    2.创建聚合图形
+    
+步骤一：创建拓扑图
 
+1）创建拓扑
 
-3监控脚本 在客户端编写监控脚本 给服务器调用
-   3.1监控nginx服务状态
-    yum -y install gcc pcre-devel
-    cd zabbix-3.4.4/
-    ./configure --enable-agent
-    make install
- vim /usr/local/etc/zabbix_agentd.conf
-  93行去掉注释 Server=127.0.0.1,192.168.2.5
- 265行Include=/usr/local/etc/zabbix_agentd.conf.d/*.conf 去掉注释
- 134行ServerActive=192.168.2.5:10051 //监控服务器ip,一定要取消127.0.0.1
- 280行UnsafeUserParameters=1 开启使用自定义脚本
+绘制拓扑图可以快速了解服务器架构，通过Monitoring（监控中）-->Maps（拓扑图），选择默认的Local network拓扑图，
+编辑即可（也可以新建一个拓扑图）
 
- useradd zabbix
- zabbix_agentd 
- ss -antup | grep 10050
+2）拓扑图图表说明
+
+    Icon（图标），添加新的设备后可以点击图标修改属性
+    Shape（形状）
+    Link（连线），先选择两个图标，再选择连线
+    完成后，点击Update（更新）
+
+步骤二：创建聚合图形
+
+1）创建聚合图形
+
+聚合图形可以在一个页面显示多个数据图表，方便了解多组数据。
+
+通过Monitoring（监控中）-->Screens（聚合图形）-->Create screen(创建聚合图形)即可创建聚合图形。
+
+修改聚合图形参数如下：
+
+    Owner：使用默认的Admin用户
+    Name：名称设置为zabbixclient_web2_host
+    Columns：列数设置为2列
+    Rows：行数设置为4行
+
+2）为聚合图形中添加监控图形
+
+选择刚刚创建的聚合图形（zabbixclient_web2_host)，点击后面的构造函数（constructor），点击Change(更改)，
+设置每行每列需要显示的数据图表.
+
+*******************************************************************************
+八 自定义监控案例
+8.1 问题
+
+   1. 监控Nginx状态
+   2. 监控网络连接状态
+ 8.2步骤
+1)安装nginx软件，开启status模块
 
 yum -y install zlib-devel //安装nginx依赖包
 tar -xf nginx-1.12.2.tar.gz   
@@ -357,8 +574,10 @@ cd nginx-1.12.2/
 ./configure --with-http_stub_status_module
 make && make install
 
+
 vim /usr/local/nginx/conf/nginx.conf
- server {
+.....
+server {
 
        location /status{   //定义访问目录名,启用状态页面模块
           stub_status on;
@@ -366,6 +585,8 @@ vim /usr/local/nginx/conf/nginx.conf
 
         listen       80;
         server_name  localhost;
+........
+}
  
  /usr/local/nginx/sbin/nginx -t //检测nginx配置文件是否正确
  /usr/local/nginx/sbin/nginx   //起nginx服务
@@ -376,7 +597,26 @@ server accepts handled requests
  70 70 20 
 Reading: 0 Writing: 1 Waiting: 0 
 
-自定义key
+2)安装Zabbix被监控服务agent
+yum -y install gcc pcre-devel
+cd zabbix-3.4.4/
+./configure --enable-agent
+ make install
+vim /usr/local/etc/zabbix_agentd.conf
+93行去掉注释 Server=127.0.0.1,192.168.2.5
+265行Include=/usr/local/etc/zabbix_agentd.conf.d/*.conf 去掉注释
+134行ServerActive=192.168.2.5:10051 //监控服务器ip,一定要取消127.0.0.1
+280行UnsafeUserParameters=1 开启使用自定义脚本
+
+useradd zabbix
+zabbix_agentd
+ss -antup | grep 10050
+
+
+
+
+2）自定义监控key
+自定义key语法格式为：UserParameter=自定义key名称,命令。
 vim /usr/local/nginx/bin/ngin_status.sh
 cas $1 in
 "Active")
@@ -392,16 +632,51 @@ cd /usr/local/etc/zabbix_agentd.conf.d/
 vim x.conf
 UserParameter=nginx_statu[*],/usr/local/bin/nginx_status.sh $1
 killall -9 zabbix_agentd
-
-3.2监控网络连接状态
-   
 zabbix_get -s 127.0.0.1 -p 10050 -k nginx_statu[Waiting]
 
+ 
+4 配置监控服务器,登录管理页面如下配置
+所有模板/ATMP3 应用集 监控项 触发器 图形 聚合图形 自动发现规则 Web 场景
+
+1.创建新监控模板ATMP3----->2.创建应用集  mon_nginx----->3.创建监控项----->4.使用新模板监控200主机---> 5.查看监控数据
 
 
+步骤二 监控网络连接状态
+ 1）了解TCP协议
+ TCP三次握手  client  --->SYN   server--->SYN,ACK--->client---->ACK---->sever
+ 
+ TCP四次断开 client---->FIN ACK  server---->ACK--->--->FIN -->client---ACK --->server
 
+2）查看网络连接状态
 
+模拟多人并发连接
 
+]# ab -c 1000 -n 100000 http://192.168.2.100/
+
+3)创建自定义key
+vim /usr/local/etc/zabbix_agentd.conf.d/net.status
+UserParameter=net.status[*],/usr/local/bin/net_status.sh $1
+killall zabbix_agentd
+zabbix_agentd
+
+自定义监控脚本
+ vim /usr/local/bin/net_status.sh 
+#!/bin/bash
+case $1 in
+estab)
+    ss -antp |awk '/^ESTAB/{x++} END{print x}';;
+close_wait)
+    ss -antp |awk '/^CLOSE-WAIT/{x++} END{print x}';;
+time_wait)
+    ss -antp |awk '/^TIME-WAIT/{x++} END{print x}';;
+esac 
+chmod +x  /usr/local/bin/net_status.sh
+
+测试效果：
+ zabbix_get  -s 127.0.0.1 -p 10050 -k net.status[time_wait]
+
+4)配置监控服务器,登录管理页面如下配置
+在监控模板ATMP3----->创建应用集  mon_tcp----->创建监控项-----> 查看监控数据
 
 
 
