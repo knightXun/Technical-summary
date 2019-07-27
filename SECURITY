@@ -1,0 +1,86 @@
+Linux 基本防护
+
+chage -l root            查看用户账号信息
+chage -E 2019/7/31 bob   设置账号有效期
+chage -d 0 bob           强制修改密码
+
+chage -l bob
+最近一次密码修改时间					：密码必须更改
+密码过期时间					：密码必须更改
+密码失效时间					：密码必须更改
+帐户过期时间						：7月 31, 2019
+两次改变密码之间相距的最小天数		：0
+两次改变密码之间相距的最大天数		：99999
+在密码过期之前警告的天数	：7
+
+账号的锁定/解锁
+passwd -S bob   看状态
+passwd -l bob   锁定 
+passwd -u  bob  解锁
+
+强制定期修改密码
+
+添加用户的默认配置文件    /etc/login.defs
+
+grep -v '#' /etc/login.defs
+
+MAIL_DIR	/var/spool/mail    
+
+PASS_MAX_DAYS	99999
+PASS_MIN_DAYS	0        最小有效时间
+PASS_MIN_LEN	5        密码长度
+PASS_WARN_AGE	7        提前警告时间
+
+UID_MIN                  1000
+UID_MAX                 60000
+SYS_UID_MIN               201
+SYS_UID_MAX               999
+
+GID_MIN                  1000
+GID_MAX                 60000
+SYS_GID_MIN               201
+SYS_GID_MAX               999
+
+
+CREATE_HOME	yes
+
+UMASK           077
+
+USERGROUPS_ENAB yes
+
+ENCRYPT_METHOD SHA512 
+
+伪装登录提示  把里面两行删除
+默认会显示内核,系统版本信息
+]#cat /etc/issue  本地登录 
+\S                       
+Kernel \r on an \m
+
+]# cat /etc/issue.net 远程登录
+\S
+Kernel \r on an \m
+  
+
+文件系统安全:
+禁用非必要的系统服务RHEL7
+systemctl disable httpd  设置开机服务不起
+
+禁用非必要的系统服务RHEL6
+chkonfig httpd off      设置服务开机不起
+
+锁定/解锁保护文件(给文件属性)
+EXT3/EXT4
+-chattr lsattr(查看)
+控制方式  + - =
+属性 i : 不可变 (immutable)
+属性 a :仅可追加(append only)
+
+     
+
+
+
+
+
+
+
+
