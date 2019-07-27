@@ -3,6 +3,7 @@ Linux 基本防护
 chage -l root            查看用户账号信息
 chage -E 2019/7/31 bob   设置账号有效期
 chage -d 0 bob           强制修改密码
+echo 123456 | passwd --stdin bob  设置密码
 
 chage -l bob
 最近一次密码修改时间					：密码必须更改
@@ -70,12 +71,64 @@ chkonfig httpd off      设置服务开机不起
 
 锁定/解锁保护文件(给文件属性)
 EXT3/EXT4
--chattr lsattr(查看)
+-chattr修改 
+lsattr查看
 控制方式  + - =
 属性 i : 不可变 (immutable)
 属性 a :仅可追加(append only)
 
+添加           chattr +i /etc/resolv.conf
+
+查看           lsattr -l /etc/resolv.conf 
      
+删除            chattr -i /etc/resolv.conf
+
+
+用户切换与提权
+用户切换:    su  su [-] 用户   su bob 不带'-'  切换用户 系统环境不变,还是用root环境
+                             su - bob   带'-'  切换用户,切换到bob用户系统环境
+            su [-] -c "命令"  "目标用户"
+            su - -c "systemctl restart mysqld" root
+记录su 操作的日志文件:   /var/log/secure
+
+用户提权:     sudo(设置系统普通用户可以执行root用户命令的全权限)
+             
+主配置文件:   /etc/sudoers
+打开主配置文件方法: 推荐  1. vim /etc/sudoers :wq! 
+                       2. visudo 
+格式1  用户名    主机名列表=命令列表 
+格式2  %用户组名  主机名列表=命令列表
+
+工作时一定要注释92行 #%wheel ALL=(ALL)       ALL
+ 
+ useradd dc
+ echo '123456' | passwd --stdin dc
+ usermod -G wheel dc
+
+ sudo  yum -y install httpd  加入wheel组,普通用户也能有root的所有权限
+ 
+给bob提权
+bob localhost,mysql50=/usr/bin/vim /etc/my.cnf , /usr/bin/systemctl * mysqld
+ssh bob@192.168.4.50 
+sudo -l
+
+
+用户make localhost,mysql50=/sbin/* , !/sbin/ifconfig eth0   取反
+sudo ifconfig eth0
+对不起，用户 make 无权以 root 的身份在 mysql50 上执行 /sbin/ifconfig eth0。
+
+vim /etc/sudoers
+Defaults logfile="/var/log/sudo"
+:wq!
+ssh -X make@192.168.4.50
+useradd dc
+ls /var/log/sudo 生成一个文本文件
+
+配置别名(别名名称必须大写字母)
+主机别名 Host_Alias  别名名称=值列表  Host_Alias  MYPC=localhost,mysql50
+用户别名 User_Alias  别名名称=值列表  User_Alias   MYILSERVERS=make,bob
+命令别名 Cmnd_Alias  别名名称=值列表   Cmnd_Alias   MYCMND=/usr/bin/yum,/bin/rpm
+
 
 
 
