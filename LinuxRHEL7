@@ -1,0 +1,20 @@
+RHEL7基本操作
+
+获取命令行界面
+• 虚拟控制台切换( Ctrl + Alt + Fn 组合键)
+– tty1:图形桌面
+– tty2~tty6:字符控制台
+
+列出内核版本: 
+uname -r 
+cat  /etc/redhat-release
+cat  -n  /etc/shells
+
+ls命令
+– -l :以长格式显示, 显示详细属性
+ 
+ 列出CPU处理器信息     lscpu
+
+• 检查内存大小、空闲情  cat /proc/meminfo
+
+Linux中常见的文件系统:Fedora    Rehat
