@@ -1,12 +1,6 @@
 1.加密与解密
 
 1.1加/解密概述:
-                                         加密 
-                               发送方 :明文---> 密文
-
-                                         解密
-                               接收方 :密文---->明文
- 
 Hash摘要:检验完整性 :
                                MD5校验     md5sum  任何文件
                                SHA校验     sha1sum 任何文件
@@ -18,10 +12,18 @@ Hash摘要:检验完整性 :
                                   查看版本: gpg --version                                 
                                   查看软件描述: rpm -qi gnupg2
 
-1.2.1gpg数据对称加密与解密文件:            gpg -c 加密
-                                       gpg -d 解密
+1.2.1gpg数据对称加密与解密文件:           
+                              
+                               发送方  加密 (明文---> 密文)
+                                gpg -c 加密文件
+                               接收方  解密 (密文---->明文)
+                                gpg -d 解密文件  > ~/a.txt
+                         
 
 1.2.2gpg数据非对称加密与解密文件:(公钥文件加密,私钥文件解密)
+                                                  mv /dev/random /dev/randoma
+                                                  ln -s /dev/urandom /dev/random
+
 
                                工作过程             接收方 userb 
                                                     rm -rf ~/.gnupg/  密钥对文件 
@@ -41,7 +43,7 @@ Hash摘要:检验完整性 :
                                                      cat ~/t.txt
                                                      gpg -b ~/t.txt
                                                      mv t.txt* /tmp
-                                                     
+                                                       
                                                      usera   gpg --verify /共享目录/文件名   做验证数字签名
                                                        cat /tmp/t.txt                 
                                                        gpg --verify /tmp/t.txt.sig
@@ -54,11 +56,11 @@ Hash摘要:检验完整性 :
 2.AIED入侵检测系统:
 AIED服务的使用    1. 软件包:aide  yum -y install aide.x86_64
                  2.主配置文件:    vim /etc/aide.conf
-                                @@define DBDIR /var/lib/aide //数据库目录  DBDIR:变量  /var/lib/aide:值
-                                @@define LOGDIR /var/log/aide //日志目录
+                                @@define DBDIR /var/lib/aide       //数据库目录  DBDIR:变量  /var/lib/aide:值
+                                @@define LOGDIR /var/log/aide      //日志目录
                                 database=file:@@{DBDIR}/aide.db.gz //数据库文件名
                       
-                 3. 测试:    sed -i '99,312s/^/#/' /etc/aide.conf
+                 3. 测试:  sed -i '99,312s/^/#/' /etc/aide.conf
                            vim +98 /etc/aide.conf
                            /root/  FIPSR 
                  4. 始化检测:   aide --init 
@@ -87,20 +89,38 @@ AIED服务的使用    1. 软件包:aide  yum -y install aide.x86_64
            
            基本用法:nmap [扫描类型] [选项] <扫描目标>                   
            例子:   nmap -sS -n -p 21-3306,6379,27017 176.121.213.111 -n:不执行DNS扫描
-           扫描类型:nmap  -sP  ICMP扫描
-                         -A   目标系统全面分析
+           扫描类型:nmap  -sP  ICMP扫描 ping
+                         -A   目标系统全面分析复 A是合选项 =-O(OS检测),-sV(版本检测),-sC(脚本检测),traceroute跟踪 
                          -sS  TCP SYN扫描(半开) DDos攻击
                          -sT  TCP连接扫描(全开)
                          -sU  UDP扫描                         
                          
-3.2 tcpdump抓包
+3.2 tcpdump抓包  tcpdump-4.9.2-3.el7.x86_64软件包
+
+基本用法 tcpdump [选项] [过滤条件]
+例子:tcpdump -c 2 
+                                  常见监控选项
+                                  -i 指定监控的网络接口 默认监视0口
+                                  -c 定义抓包个数
+                                  -w 将数据包信息保存到指定文件
+                                  -r 从指定文件读取数据包信息
+                                  -A 转换为ACSII码,以方便阅读
 
 
+tcpdump的过滤条件：  
+                                   类型：host、net、port、portrange
+                                   方向：src、dst
+                                   协议：tcp、udp、ip、wlan、arp、……
+                                   多个条件组合：and、or、not
 
 
+tcpdump -A host 192.168.4.254 and tcp port 21 抓登陆我的ftp的主机,条件抓254主机的
+
+tcpdump -A -r ftp2.cap | grep -i pass  抓用户的登陆密码
 
 
-
-
+wireshark协议分析器(图形界面)
+yum list | grep wireshark 查看需要的软件包
+yum -y install wireshark-gnome.x86_64
 
 
