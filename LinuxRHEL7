@@ -1,5 +1,45 @@
 RHEL7基本操作
 
+
+1.图形鼠标将光盘镜像文件放入虚拟光驱设备
+2.查看光驱设备
+[root@localhost ~]# ls /dev/sr0
+/dev/sr0
+[root@localhost ~]# ls /dev/cdrom
+/dev/cdrom         #青色:代表快捷方式颜色
+[root@localhost ~]# 
+
+3.命令行挂载设备
+[root@localhost ~]# mkdir /dvd
+[root@localhost ~]# ls /dvd
+[root@localhost ~]# mount /dev/cdrom  /dvd
+mount: /dev/sr0 写保护，将以只读方式挂载
+[root@localhost ~]# ls /dvd/
+
+4.卸载
+[root@localhost ~]# umount /dvd/
+[root@localhost ~]# ls /dvd/
+[root@localhost ~]# umount /dvd/
+umount: /dvd/：未挂载
+[root@localhost ~]# mkdir /nsd1904
+[root@localhost ~]# mount /dev/cdrom  /nsd1904
+[root@localhost ~]# ls /nsd1904
+
+注意事项:
+ 1.卸载,当前不要在挂载点(访问点)目录下
+[root@localhost dvd]# umount /dvd/
+umount: /dvd：目标忙。
+        (有些情况下通过 lsof(8) 或 fuser(1) 可以
+         找到有关使用该设备的进程的有用信息)
+[root@localhost dvd]# 
+
+ 2.挂载允许一个设备具备多个挂载点(访问点)
+ 3.不允许多个设备挂载到一个挂载点(访问点)
+ 4.强烈建议挂载点(访问点)选择自己创建的目录
+
+################################################################
+
+
 获取命令行界面
 • 虚拟控制台切换( Ctrl + Alt + Fn 组合键)
 – tty1:图形桌面
@@ -18,3 +58,22 @@ ls命令
 • 检查内存大小、空闲情  cat /proc/meminfo
 
 Linux中常见的文件系统:Fedora    Rehat
+
+  alias [别名名称]
+ 定义新的别名
+– alias 别名名称='实际执行的命令行'
+• 取消已设置的别名
+– unalias [别名名称]
+
+
+
+
+
+
+
+
+
+
+
+
+
