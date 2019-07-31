@@ -421,7 +421,7 @@ tomcat服务安全
 启动服务                 /usr/local/tomcat/bin/startup.sh  
 写入测试网页              echo 123 > /usr/local/tomcat/webapps/ROOT/a.html   
 
-测试                      curl http://127.0.0.1:8080/a.html
+测试                     curl http://127.0.0.1:8080/a.html
 
 2.优化配置
 2.1隐藏版本信息
@@ -429,19 +429,19 @@ tomcat服务安全
                           yum -y install java-1.8.0-openjdk-devel
                           cd /usr/local/tomcat/lib/
                           jar -xf catalina.jar
-                           vim +16 org/apache/catalina/util/ServerInfo.properties 
-                           //根据自己的需要，修改版本信息的内容
+                          vim +16 org/apache/catalina/util/ServerInfo.properties 
+                          //根据自己的需要，修改版本信息的内容
 
-                            server.info=IIS^M
-                            server.number=9.10.32.0^M
-                            server.built=Dec 1 2019 22:30:46 UTC
+                          server.info=IIS^M
+                          server.number=9.10.32.0^M
+                          server.built=Dec 1 2019 22:30:46 UTC
 
 
-                              vim +69 /usr/local/tomcat/conf/server.xml  修改版本包头信息
+                          vim +69 /usr/local/tomcat/conf/server.xml  修改版本包头信息
                               <Connector port="8080" protocol="HTTP/1.1"
                                              connectionTimeout="20000"
                                              redirectPort="8443" server="Nginx" /> 
-                               在后面追加server="Nginx" ,自定义版本信息
+                          在后面追加server="Nginx" ,自定义版本信息
 
 [root@web1 lib]# /usr/local/tomcat/bin/shutdown.sh		//关闭服务
 [root@web1 lib]# /usr/local/tomcat/bin/startup.sh		//启动服务
@@ -455,7 +455,7 @@ tomcat服务安全
                                     //使用su命令切换为tomcat账户，以tomcat账户的身份启动tomcat服务
                                      chmod +x /etc/rc.local				//该文件为开机启动文件
                                      vim /etc/rc.local 					//修改文件，添加如下内容
-                                    su -c /usr/local/tomcat/bin/startup.sh tomcat
+                                     su -c /usr/local/tomcat/bin/startup.sh tomcat
 
  删除默认的测试页面:                   rm -rf  /usr/local/tomcat/webapps/*
 
@@ -505,28 +505,163 @@ tree /demo/
 还原版本(进入到打补丁所在路径)    patch -RE < 补丁文件 撤销
 
 
+******************************************************************************
+
+iptables防火墙
+
+RHEL7 firewalld  
+RHEL6 iptables
+RHEL5 iptables
+
+
+
+
+安装iptables防火墙软件     yum -y install iptables-services.x86_64                   
+                         systemctl start iptables.service
+                         systemctl enable iptables.service 
+
+
+
+
+iptables防火墙服务的组成  4张表 5条链
+
+表是iptables防火墙服务功能分类
+1）iptables的4个表（区分大小写）：
+raw    状态跟踪   PREROUTING OUTPUT
+mangle 包标记     PREROUTING     
+nat    地址转换
+filter 过滤表(默认表)
+
+2）iptables的5个链（区分大小写）：
+链是匹配ip数据包传输的方向
+INPUT进入防火墙主机的包
+OUTPUT从防火墙主机出去的包
+FORWARD从防火墙经过的包
+PREROUTING 路由前处理
+POSTROUTING路由后处理
+
+
+iptables命令的基本使用方法 
+iptables  [-t 表名]  选项  [链名]  [条件]  [-j 目标操作]
+
+表名                 选项                           链名                    条件           目标操作：
+raw    状态跟踪     -L : 查看所有规则                 INPUT进入防火墙主机的包   -p: 协议名     ACCEPT：允许通过/放行
+mangle 包标记      -A :追加一条防火墙规则至链的末尾位置  OUTPUT从防火墙主机出去的包-i:收数据的网卡 DROP：直接丢弃，不给出任何回应
+nat    地址转换选项 -I :插入一条防火墙规则至链的开头     FORWARD从防火墙经过的包 -o:发数据的网卡   REJECT：拒绝通过，必要时会给出提示
+filter 过滤表(默认表)-D :删除指定一条规则             PREROUTING 路由前处理  --sport:源端口    LOG：记录日志，然后传给下一条规则
+                  -F :清空所有规则                  POSTROUTING路由后处理  --dport:目标端口
+		--line-numbles:查看规则时,显示规则的行号                       -s:源地址
+                  -P:设置默认规则                                             -d:目标地址
+                                                                         --icmp-type[请求echo-request/回应echo-reply]
+iptables -t filter -A INPUT -p tcp --dport 22 -j ACCEPT                           
+iptables -t filter -P INPUT DROP
+iptables -t filter -I INPUT -p tcp --drop 80 -s 192.168.4.0/24 -j ACCEPT
 
 
 
 
 
 
+//注意事项与规律：
+//可以不指定表，默认为filter表
+//可以不指定链，默认为对应表的所有链
+//如果没有找到匹配条件，则执行防火墙默认规则
+//选项/链名/目标操作用大写字母，其余都小写
 
 
+选项 
+-L : 查看所有规则
+-A :追加一条防火墙规则至链的末尾位置
+-I :插入一条防火墙规则至链的开头
+-D :删除指定一条规则
+-F :清空所有规则
+--line-numbles:查看规则时,显
+示规则的行号   
+
+条件(规则) 
+-p: 协议名
+-i:收数据的网卡
+-o:发数据的网卡
+--sport:源端口 
+--dport:目标端口
+-s:源地址
+-d:目标地址
+--icmp-type ICMP类型[请求echo-request/回应echo-reply]
 
 
+指定条件的选项
+条件的匹配顺序:顺序比对,匹配即停止(LOG除外)
+若无任何匹配,则按该链的默认策略处理
+
+目标操作：
+ACCEPT：允许通过/放行
+DROP：直接丢弃，不给出任何回应
+REJECT：拒绝通过，必要时会给出提示
+LOG：记录日志，然后传给下一条规则
+
+保存规则,永久有效        iptables-save > /etc/sysconfig/iptables
+
+自定义防火墙规则
+主机型防火墙:写防火墙规则保护本机(filter-->INPUT)
+iptables -t filter -A INPUT -p tcp --dport 22 -j ACCEPT                           
+
+iptables -t filter -P INPUT DROP
+
+iptables -t filter -I INPUT -p tcp --drop 80 -s 192.168.4.0/24 -j ACCEPT
+
+iptables -t filter -A INPUT -p icmp -j ACCEPT
+
+**********************************************************************************
+
+网络型防火墙:保护私网,写防火墙规则限制数据包的经过(filter-->FORWORD)
+
+liunx 系统
+开启路由转发功能  echo 1 > /proc/sys/net/ipv4/ip_forward 1开启路由转发功能
+               echo 'net.ipv4.ip_forward = 1' >> /etc/sysctl.conf 
+               sysctl -p   查看路由转发功能是否为1
+
+查看网关         route -n
+添加网关         route add default gw 192.168.2.51
+删除网关         route del default gw 网关
+
+防火墙禁止路由转发功能 iptables -t filter -P FORWARD DROP
+
+有去 iptables -t filter -A FORWARD -p tcp --dport 80 -j ACCEPT
+有回 iptables -t filter -A FORWARD -p tcp --sport 80 -j ACCEPT
+
+开启ssh功能   iptables -t filter -A FORWARD -p  tcp --dport 22 -j ACCEPT
+             iptables -t filter -A FORWARD -p  tcp --sport 22 -j ACCEPT
+
+********************************************************************************************
+
+扩展匹配
+前提条件 有对应的防火墙模块支持
+基本用法: -m 扩展条件 条件值
+类别          选项                        用法
+         MAC地址匹配              -m mac -mac-source  MAC地址
+                                        
+                                 -m multiport --sports  源端口列表
+扩展匹配  多端口匹配                -m multiport --dports  目标端口列表
+                                 -m iprange --src-range IP1-IP2
+         IP范围匹配                -m iprange --dst-range IP1-IP2
+
+使用模块扩展一次性指定多个端口:      iptables -t filter -A FORWARD -p tcp -m multiport --sports 22,80 -j ACCEPT
+				iptables -t filter -A FORWARD -p tcp -m multiport --dports 22,80 -j ACCEPT
+
+禁止来自某个地址的ping  iptables -t filter -A FORWARD -p icmp -m iprange --src-range 192.168.2.50-192.168.2.60 -j REJECT
+禁止来自MAC地址的ping  iptables -t filter -I FORWARD 3 -p icmp -m mac --mac-source 52:54:00:05:39:31 -j DROP
+ 
+查看经过自己的机器的MAC地址: arp -a 
+
+*********************************************************************************************************
 
 
+nat表的使用 (使用nat表做数据包中原地址转换 实现所有主机共享一个公网ip地址上网)
 
+SNAT 源地址转换 
+公网地址固定时:                       iptables -t nat -A POSTROUTING -s 192.168.2.0/24 -p tcp --dport 80 
+                                    -j SNAT --to-source 192.168.4.51
 
-
-
-
-
-
-
-
-
-
-
+公网地址是服务商动态分配的,定义防火墙规则:iptables -t nat -A POSTROUTING -s 192.168.2.0/24 -p tcp --dport 80 
+                                    -o eth0 -j  MASQUERADE
 
