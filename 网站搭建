@@ -1,0 +1,370 @@
+综合项目
+
+1：配置逻辑卷
+具体配置如下：(11,22都要做)
+
+    添加磁盘   分别给2台虚拟机添加2块5G的磁盘
+    磁盘分区    fdisk  /dev/vdb  //磁盘分区 n  -->+5G-->w 
+    
+       创建LV    fdisk  /dev/vdb  //修改/dev/vdb       t--->8e--->w  
+              yum -y  install  lvm2  //安装软件,提供命令的软件
+       创建PV  pvcreate  /dev/vdb1 /dev/vdc1  //创建PV
+               pvdisplay //查看PV信息
+       创建VG  vgcreate  vg0 /dev/vdb1 /dev/vdc1  //创建vg  名称vg0
+               vgdisplay  //查看Vg信息
+       创建LV  lvcreate  -n lv0 /dev/vg0 -L 9.99G //创建LV 名称为lv0 大小9.99G
+                lvdisplay    //查看lV信息
+      格式化  mkfs.xfs /dev/vg0/lv0
+
+查看文件系统类型      blkid  /dev/vg0/lv0   
+查看磁盘容量          fdisk  -l /dev/vdb 
+
+
+
+
+
+
+
+2：配置数据库服务器
+具体操作如下：
+
+    安装MySQL软件
+    挂载LV分区
+    启动服务
+    管理员登录
+安装软件MySQL服务软件 yum -y  install mysql-community-*.rpm
+                    [root@mysql11 ~]# ls *.rpm
+                    mysql-community-client-5.7.17-1.el7.x86_64.rpm
+                    mysql-community-common-5.7.17-1.el7.x86_64.rpm
+                    mysql-community-devel-5.7.17-1.el7.x86_64.rpm
+                    mysql-community-embedded-5.7.17-1.el7.x86_64.rpm
+                    mysql-community-embedded-compat-5.7.17-1.el7.x86_64.rpm
+                    mysql-community-embedded-devel-5.7.17-1.el7.x86_64.rpm
+                    mysql-community-libs-5.7.17-1.el7.x86_64.rpm
+                    mysql-community-libs-compat-5.7.17-1.el7.x86_64.rpm
+                    mysql-community-minimal-debuginfo-5.7.17-1.el7.x86_64.rpm
+                    mysql-community-server-5.7.17-1.el7.x86_64.rpm
+                    mysql-community-test-5.7.17-1.el7.x86_64.rpm
+                    
+  步骤二：挂载lv设备
+
+1）设置开机挂载
+
+[root@mysql11 ~]# blkid /dev/vg0/lv0
+/dev/vg0/lv0: UUID="3e06f58f-8793-4800-b444-676f5a07fe10" TYPE="xfs"
+[root@mysql11 ~]#
+
+[root@mysql11 ~]# vim /etc/fstab
+/dev/vg0/lv0    /var/lib/mysql xfs      defaults        0 0
+:wq
+[root@mysql11 ~]#
+
+步骤三：启动服务
+
+1）启动服务
+
+2台数据库服务器都要启动服务
+
+[root@mysql11 ~]# systemctl start  mysqld
+
+
+2）查看挂载信息
+
+[root@mysql11 ~]# mount -a
+
+[root@mysql11 ~]# mount | grep  lv0
+/dev/mapper/vg0-lv0 on /var/lib/mysql type xfs (rw,relatime,attr2,inode64,noquota)
+[root@mysql11 ~]#
+
+
+  步骤四：管理员登录
+
+1）查看初始密码
+
+[root@mysql11 ~]# grep password  /var/log/mysqld.log
+2019-07-05T01:56:51.895852Z 1 [Note] A temporary password is generated for root@localhost: bB0*uCmu:.Kj
+
+[root@mysql11 ~]#
+[root@mysql11 ~]# mysql -uroot -p'bB0*uCmu:.Kj'  //初始密码登录                
+                    
+                    
+                    
+2）修改登录密码
+
+mysql> alter user root@"localhost" identified by "123qqq...A";
+Query OK, 0 rows affected (0.01 sec)
+mysql>
+mysql> exit
+Bye
+[root@mysql11 ~]#
+
+3：配置主从同步
+    配置步骤如下：
+
+    配置主服务器
+    配置从服务器
+ 步骤一：配置主服务器 4.11
+
+1）启用binlog日志
+
+[root@mysql11 ~]# vim /etc/my.cnf
+[mysqld]
+server_id=11
+log-bin=master11
+:wq
+[root@mysql11 ~]# systemctl  restart mysqld               
+ 
+ 2）用户授权
+ grant replication  slave  on  *.*  to  repluser@"%" identified by "123qqq...A";                   
+                    
+ 3）查看日志信息:  show master status;                
+                    
+ 步骤二：配置从服务器 4.22
+
+1）指定server_id
+
+[root@mysql22 ~]# vim /etc/my.cnf
+[mysqld]
+server_id=22
+:wq
+[root@mysql22 ~]# systemctl  restart mysqld
+
+2）指定主服务器信息
+mysql> change master to  master_host="192.168.4.11",master_user="repluser",
+    -> master_password="123qqq...A",master_log_file="master11.000001",master_log_pos=441;                   
+                    
+ 3）启动slave进程
+
+mysql> start slave ;
+Query OK, 0 rows affected (0.02 sec)
+                   
+  4）查看状态信息: show slave status\G                
+                    
+   
+maxcale 4.77   
+ 4：配置读写分离服务  
+  配置步骤如下：
+
+    安装软件
+    修改配置文件
+    配置数据库服务器
+    启动服务
+    查看服务状态
+    查看监控信息
+
+
+步骤一：配置读写分离服务
+
+1）安装软件
+
+[root@maxscale77 ~]# rpm -ivh  maxscale-2.1.2-1.rhel.7.x86_64.rpm //安装软件
+警告：maxscale-2.1.2-1.rhel.7.x86_64.rpm: 头V4 RSA/SHA1 Signature, 密钥 ID 8167ee24: NOKEY
+准备中...                          ################################# [100%]
+正在升级/安装...
+   1:maxscale-2.1.2-1                                                   (  2%################################# [100%]
+[root@maxscale77 ~]#
+[root@maxscale77 ~]# ls /etc/maxscale.cnf  //主配置文件
+/etc/maxscale.cnf
+[root@maxscale77 ~]# ls /var/log/maxscale/   //日志目录
+
+2）修改配置文件
+
+[root@maxscale77 ~]# vim  /etc/maxscale.cnf
+
+[maxscale]  //服务线程数量
+threads=auto
+
+[server1] //第1台数据库服务器
+type=server
+address=192.168.4.11
+port=3306
+protocol=MySQLBackend
+
+[server2]  //第2台数据库服务器
+type=server
+address=192.168.4.22
+port=3306
+protocol=MySQLBackend
+
+[MySQL Monitor] //指定监控数据库服务器server1 和 server2
+type=monitor
+module=mysqlmon
+servers=server1, server2
+user=maxscalemon   //监控用户
+passwd=123qqq...A  //密码
+monitor_interval=10000
+
+[Read-Write Service]  //定义读写分离服务
+type=service
+router=readwritesplit
+servers=server1, server2
+user=maxscalerouter  //路由用户
+passwd=123qqq...A  //密码
+max_slave_connections=100%
+
+[MaxAdmin Service]  //定义管理服务
+type=service
+router=cli
+
+[Read-Write Listener]  //定义读写分离服务端口
+type=listener
+service=Read-Write Service
+protocol=MySQLClient
+port=4006  //端口号
+
+[MaxAdmin Listener]  //定义管理服务端口
+type=listener
+service=MaxAdmin Service
+protocol=maxscaled
+socket=default
+port=4016 //端口号
+:wq
+[root@maxscale77 ~]#
+                     
+步骤二：配置数据库服务器
+
+[root@mysql11 ~]# mysql -uroot -p123qqq...A
+mysql> grant replication slave, replication client on *.*
+    -> to  maxscalemon@"%"identified by "123qqq...A";
+Query OK, 0 rows affected, 1 warning (0.03 sec)
+
+mysql> grant select  on  mysql.*  to
+    -> maxscalerouter@"%" identified by "123qqq...A";
+Query OK, 0 rows affected, 1 warning (0.02 sec)
+
+mysql>
+
+
+[root@mysql22 ~]# mysql -uroot -p123qqq...A -e 'select user,host from mysql.user where user like "maxscale%" '
+mysql: [Warning] Using a password on the command line interface can be insecure.
++----------------+------+
+| user           | host |
++----------------+------+
+| maxscalemon    | %    |
+| maxscalerouter | %    |
++----------------+------+
+[root@mysql22 ~]#
+
+步骤三：启动maxsacle服务
+
+1）启动服务
+
+[root@maxscale77 ~]#
+[root@maxscale77 ~]# maxscale  -f /etc/maxscale.cnf
+[root@maxscale77 ~]#
+
+2）查看服务信息（进程 和 端口）
+
+[root@maxscale77 ~]# ps -C maxscale
+  PID TTY          TIME CMD
+23254 ?        00:00:00 maxscale
+[root@maxscale77 ~]#
+
+[root@maxscale77 ~]# netstat -utnlp  | grep  maxscale
+tcp6       0      0 :::4006                 :::*                    LISTEN      23254/maxscale
+tcp6       0      0 :::4016                 :::*                    LISTEN      23254/maxscale
+[root@maxscale77 ~]#
+
+3）在maxscale服务本机访问管理服务，查看监控信息
+
+[root@maxscale77 ~]# maxadmin  -uadmin  -pmariadb -P4016
+MaxScale> list servers
+Servers.
+-------------------+-----------------+-------+-------------+--------------------
+Server             | Address         | Port  | Connections | Status
+-------------------+-----------------+-------+-------------+--------------------
+server1            | 192.168.4.11    |  3306 |           0 | Master, Running
+server2            | 192.168.4.22    |  3306 |           0 | Slave, Running
+-------------------+-----------------+-------+-------------+--------------------
+MaxScale>
+MaxScale> exit
+   
+   
+    
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+                    
+                    
+                    
+                    
+                    
+                    
