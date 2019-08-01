@@ -21,32 +21,32 @@ Hash摘要:检验完整性 :
                          
 
 1.2.2gpg数据非对称加密与解密文件:(公钥文件加密,私钥文件解密)
-                                                  mv /dev/random /dev/randoma
-                                                  ln -s /dev/urandom /dev/random
+                               mv /dev/random /dev/randoma
+                               ln -s /dev/urandom /dev/random
 
 
-                               工作过程             接收方 userb 
-                                                    rm -rf ~/.gnupg/  密钥对文件 
-                                                   1.创建密钥对  gpg --gen-key
-                                                   2.导出公钥    gpg --export -a  > userb.pub -a:可读
-                                                   3.共享公钥    mv userb.pub /共享目录 
+           工作过程             接收方 userb 
+                               rm -rf ~/.gnupg/  密钥对文件 
+                               1.创建密钥对  gpg --gen-key
+                               2.导出公钥    gpg --export -a  > userb.pub -a:可读
+                               3.共享公钥    mv userb.pub /共享目录 
                                                    
-                                                   发送方 usera
-                                                   1.导入公钥        gpg --import 公钥文件
-                                                   2.使用公钥加密文件 gpg -e -r 用户名 文件   -e:加密
-                                                   3.共享加密文件     mv 加密文件  /共享目录
-                                                   4.userb解密文件   gpg -d  加密文件 > ~/文件
+                                发送方 usera
+                                1.导入公钥        gpg --import 公钥文件
+                                2.使用公钥加密文件 gpg -e -r 用户名 文件   -e:加密
+                                3.共享加密文件     mv 加密文件  /共享目录
+                                4.userb解密文件   gpg -d  加密文件 > ~/文件
  
  1.2.3gpg数字签名与验证签名(私钥文件签名 公钥文件验证签名) 
- 生产环境签名应用                                      userb   userb -b /文件名  做数字签名,并共享签名文件及原文件          
-                                                     vim ~/t.txt
-                                                     cat ~/t.txt
-                                                     gpg -b ~/t.txt
-                                                     mv t.txt* /tmp
+ 生产环境签名应用                     userb   userb -b /文件名  做数字签名,并共享签名文件及原文件          
+                                    vim ~/t.txt
+                                    cat ~/t.txt
+                                    gpg -b ~/t.txt
+                                    mv t.txt* /tmp
                                                        
-                                                     usera   gpg --verify /共享目录/文件名   做验证数字签名
-                                                       cat /tmp/t.txt                 
-                                                       gpg --verify /tmp/t.txt.sig
+                                    usera   gpg --verify /共享目录/文件名   做验证数字签名
+                                    cat /tmp/t.txt                 
+                                    gpg --verify /tmp/t.txt.sig
                                                        
                                                        
                                                        
