@@ -665,3 +665,15 @@ SNAT 源地址转换
 公网地址是服务商动态分配的,定义防火墙规则:iptables -t nat -A POSTROUTING -s 192.168.2.0/24 -p tcp --dport 80 
                                     -o eth0 -j  MASQUERADE
 
+
+
+
+
+
+
+
+
+
+
+
+
