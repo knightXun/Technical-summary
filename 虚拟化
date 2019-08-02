@@ -109,7 +109,7 @@ NETMASK="255.255.255.0"          子网掩码
 GAETWAY="192.168.1.254"          默认网关
 
 
-virsh 扩容磁盘 思路:硬盘-->分区-->文件系统
+virsh 扩容磁盘     思路:硬盘-->分区-->文件系统
 virsh 虚拟机管理                                     实例: 为ooxx扩容磁盘 
 查看虚拟机硬盘信息   domblklist                             virsh domblklist ooxx
                                                           目标     源
@@ -117,19 +117,50 @@ virsh 虚拟机管理                                     实例: 为ooxx扩容�
                                                           vda        /var/lib/libvirt/images/ooxx.img
                                                 
 blockresize --path [决对路径] --size 50G 主机名     virsh blockresize --path /var/lib/libvirt/images/ooxx.img --size 50G ooxx
+                                                  virsh start --console 虚拟机名    
 根分区扩容:语言必须设置为英文 LANG=C                              LANG=C 
-查看硬盘                   lsblk                                          
+查看硬盘                   lsblk                               lsblk           
 扩容分区                   /usr/bin/growpart      /磁盘路径     growpart /dev/vda 1
+查看文件系统                blkid
 扩容文件系统                /usr/sbin/xfs_growfs   /跟路径       xfs_growfs /
 检查                       df -h 
 
 
 云计算
 IaaS:既基础设施即服务
-PaaS:平台即服务
-SaaS:软件服务
+提供给消费者的服务是对所有计算基础设施的利用,包括处理cpu,内存,存储,网络和其它基本的计算资源,用户能够部署和运行任意软件,包括操作系统和应用程序
+有三种用法:公有云,私有云,混合云
+
+PaaS:(Platform-as-a-Service),意思是平台即服务
+以服务器平台或者开发环境作为服务进程进行提供就成为了PaaS
+PaaS运营商所需提供的服务,不仅仅是单纯的基础平台,还针对该平台的技术支持服务,甚至针对对该平台进行的应用系统开发、优化等服务
+简单地说,PaaS平台是云环境中的应用基础设施服务,也可以说中间件即服务
+
+
+SaaS:(Software-as-a-Service)软件即服务,是一种通过Internet提供软件的模式,厂商将应用软件统一部署在自己的服务器上,客户可以根据自己实际需求,
+通过互联网向厂商定购所需的应用软件服务
+用户不用再购买软件,而是向提供商租用基于Web的软件,来管理企业经营活动,不用对软件进行维护,提供商会全权管理和维护软件,同时也提供软件的离线操作和本地数据存储
 
 Openstack:是一套IaaS解决方案
+OpenStack是一个开源的云计算管理平台
+以Apache许可证为授权
+
+
+云计算三大服务模式
+软件,应用
+SaaS
+
+平台,运行环境
+PaaS
+
+基础设施
+IaaS
+
+知名云服务商
+国外:亚马逊AWK,微软Azure,IBM SCE+ ...
+国外:华为云,阿里云,百度云,腾讯云
+
+
 
 查看公网IP 
 curl ip.3322.net
