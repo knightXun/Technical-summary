@@ -1,9 +1,11 @@
+
+
 虚拟化(virtulization)
 1千兆 带宽100M
 
-厂商:              pc/服务器代表
-VMware             vSphere=esxi+vcenter    esxi=Linux +vmware 需要熟悉sqlserver
-RedHat             KVM
+厂商:              			 pc/服务器代表
+VMware                         		  vSphere=esxi+vcenter    esxi=Linux +vmware 需要熟悉sqlserver
+RedHat              		          KVM
 
 ps -efww   查看所有进程 
 ps -ef | grep qemu 
@@ -23,21 +25,21 @@ virt-p2v     :                              物理机迁移工具
 
 systemctl start libvirtd :                   起服务
 
-虚拟机组成:一个XML文件(虚拟机配制声明文件)+        /etc/libvirt/qemu/
-          一个磁盘镜像文件(虚拟机的银盘)         /var/lib/libvirt/images/
+虚拟机组成:一个XML文件(虚拟机配制声明文件)和       /etc/libvirt/qemu/
+         一个磁盘镜像文件(虚拟机的银盘)          /var/lib/libvirt/images/
 
 虚拟机(virsh)管理操作
 
 格式: virsh 选项  主机名
 
-列出所有              virsh list --all
-查看基本信息           virsh  dominfo  主机名
-启动,停止,重启         satrt|shutdown|reboot
-强制关闭              destroy
-根据xml文件创建/删除    define|undefine
-连接                  console
+列出所有                                      virsh list --all
+查看基本信息           			 virsh  dominfo  主机名
+启动,停止,重启         			 satrt|shutdown|reboot
+强制关闭              		          destroy
+根据xml文件创建/删除    		       define|undefine
+连接                  			   console
 
-修改配置               edit
+修改配置                                      edit
 设置开机自启动          autostart
 取消开机自启动          autostart --disable
 查看网卡信息            domiflist
