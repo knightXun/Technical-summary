@@ -1,0 +1,266 @@
+parted分区工具,进行gpt分区模式
+
+       128个主分区 最大空间支持18EB
+
+[root@A ~]# parted  /dev/vdb
+(parted) mktable  gpt        #指定分区表类型为gpt
+(parted) print               #输出分区表信息
+(parted) mkpart              #划分新的分区
+分区名称？  []? haha             #分区名称随意写
+文件系统类型？  [ext2]? ext4     #文件系统随意些,不起实际作用
+起始点？ 0                                    #分区起始点
+结束点？ 2G                   #分区结束点
+警告: The resulting partition is not properly aligned
+for best performance.
+忽略/Ignore/放弃/Cancel? Ignore    #选择ignore忽略
+(parted) print               
+(parted) unit  GB             #使用GB最为单位
+(parted) print
+(parted) mkpart 
+分区名称？  []? haha 
+文件系统类型？  [ext2]? ext4
+起始点？ 2G
+结束点？ 5G
+(parted) print
+(parted) quit
+###################################################
+
+RAID磁盘阵列
+
+• 廉价冗余磁盘阵列
+– Redundant Arrays of Inexpensive Disks
+– 通过硬件/软件技术,将多个较小/低速的磁盘整合成一个大磁盘
+– 阵列的价值:提升I/O效率、硬件级别的数据冗余
+– 不同RAID级别的功能、特性各不相同
+
+• RAID 0,条带模式
+– 同一个文档分散存放在不同磁盘
+– 并行写入以提高效率
+– 至少由两块磁盘组成
+
+• RAID 1,镜像模式
+– 一个文档复制成多份,分别写入不同磁盘
+– 多份拷贝提高可靠性,效率无提升
+– 至少由两块磁盘组成
+
+• RAID5,高性价比模式
+– 相当于RAID0和RAID1的折中方案
+– 需要至少一块磁盘的容量来存放校验数据
+– 至少由三块磁盘组成
+
+• RAID6,高性价比/可靠模式
+– 相当于扩展的RAID5阵列,提供2份独立校验方案
+– 需要至少两块磁盘的容量来存放校验数据
+– 至少由四块磁盘组成
+
+• RAID 0+1/RAID 1+0
+– 整合RAID 0、RAID 1的优势
+– 并行存取提高效率、镜像写入提高可靠性
+– 至少由四块磁盘组成
+
+####################################################
+
+
+
+分区规划及使用
+
+  扇区默认的大小512字节
+
+•  识别硬盘 => 分区规划 => 格式化 => 挂载使用
+     毛坯楼层 => 打隔断 => 装修  =>入驻
+
+一  识别硬盘
+[root@server0 ~]# lsblk               
+NAME    SIZE  TYPE MOUNTPOINT
+vda     10G   disk 
+└─vda1   10G   part /
+vdb      10G   disk 
+
+[root@server0 ~]# ls /dev/vdb
+
+关机添加一块新的硬盘60G硬盘
+[root@server0 ~]# poweroff 
+Connection to 172.25.0.11 closed by remote host.
+Connection to 172.25.0.11 closed.
+[student@room9pc01 ~]$ gos
+[root@server0 ~]# lsblk 
+[root@server0 ~]# ls   /dev/vdc
+
+二  分区规划 
+
+     分区模式: 
+     MBR主引导记录的分区模式
+         – 最大支持容量为 2.2TB 的磁盘
+         – 1~4个主分区,或者 3个主分区+1个扩展分区(n个逻辑分区)
+         – 扩展分区不能格式化
+
+• 修改硬盘的分区表
+[root@server0 ~]# fdisk /dev/vdb
+  n 创建新的分区----->回车----->回车---->回车----->在last结束时 +2G
+  p 查看分区表
+  n 创建新的分区----->回车----->回车---->回车----->在last结束时 +1G
+  d 删除分区
+  w 保存并退出 
+
+[root@server0 ~]# lsblk 
+[root@server0 ~]# ls  /dev/vdb[1-2]
+
+   /dev/sda5设备表示的含义:
+                     第一块SCSI接口的硬盘,第5个分区
+                     第一块SCSI接口的硬盘,第1个逻辑分区
+
+三  格式化:赋予空间文件系统的过程               
+
+     文件系统:空间存储数据的规则
+  
+    Windows: NTFS   FAT32
+
+    Linux:  ext4(RHEL6)   xfs(RHEL7)
+
+[root@server0 ~]# mkfs.ext4 /dev/vdb1  #格式化ext4文件系统
+[root@server0 ~]# blkid /dev/vdb1      #查看分区文件系统
+
+[root@server0 ~]# mkfs.xfs /dev/vdb2   #格式化xfs文件系统
+[root@server0 ~]# blkid /dev/vdb2      #查看分区文件系统
+
+
+
+四 挂载使用
+[root@server0 ~]# mkdir /mypart1
+[root@server0 ~]# mount /dev/vdb1 /mypart1
+[root@server0 ~]# df -h  #查看正在挂载的设备,使用情况
+
+[root@server0 ~]# mkdir /mypart2
+[root@server0 ~]# mount /dev/vdb2  /mypart2
+[root@server0 ~]# df -h  #查看正在挂载的设备,使用情况
+
+五  开机自动挂载
+• 配置文件 /etc/fstab 的记录格式
+   设备路径       挂载点        类型        参数         备份标记    检测顺序
+
+[root@server0 ~]# vim  /etc/fstab  
+ #命令模式 按 o可以另起新的一行进入 插入模式 
+.......
+/dev/vdb1  /mypart1  ext4   defaults  0 0
+/dev/vdb2  /mypart2  xfs    defaults  0 0
+
+[root@server0 ~]# umount /mypart1
+[root@server0 ~]# umount /mypart2
+[root@server0 ~]# df -h
+[root@server0 ~]# mount -a
+   检测/etc/fstab开机自动挂载配置文件,格式是否正确
+   检测/etc/fstab中,书写完成,但当前没有挂载的设备,进行挂载
+[root@server0 ~]# df -h
+
+六 综合分区
+综合分区，/dev/vdb继续分区
+最终有3个主分区，分别为2G、1G、1G
+   创建扩展分区 --->  两个逻辑分区，分别为1G、1G
+[root@server0 ~]# fdisk  /dev/vdb
+   p 查看分区表
+   n 创建主分区----->回车----->回车---->回车----->在last结束时 +1G
+   p 查看分区表
+   n 创建扩展分区 
+          ----->回车---->起始回车----->结束回车   将所有空间给扩展分区
+   p 查看分区表
+   n 创建逻辑分区----->起始回车------>结束+1G
+   n 创建逻辑分区----->起始回车------>结束+1G
+   p 查看分区表
+   w 保存并退出
+[root@server0 ~]# partprobe   #刷新分区表
+[root@server0 ~]# lsblk 
+
+####################################################
+
+总结：
+1.识别硬盘　lsblk
+2.分区规划    fdisk
+3.刷新分区表　　partprobe
+4.进行格式化　　mkfs.xfs  mkfs.ext4   blkid
+5.挂载使用　mount  /etc/fstab开机自动挂载   mount -a  df -h
+
+
+
+###################################################
+LVM逻辑卷
+     作用:1.整合分散的空间     2.空间可以扩大            
+
+– 零散空闲存储 ---- 整合的虚拟磁盘 ---- 虚拟的分区
+
+   将众多的物理卷(PV),组建成卷组(VG),再从卷组中划分逻辑卷(LV)
+
+LVM管理工具集
+	功能 		      	物理卷管理 	卷组管理 		逻辑卷管理
+	Scan    扫描 	  pvs		    vgs 		    lvs
+	Create  创建 	  pvcreate 	vgcreate 	  lvcreate
+	Display 显示  	pvdisplay vgdisplay  	lvdisplay
+	Remove  删除 	  pvremove 	vgremove   	lvremove
+	Extend  扩展    	/       vgextend 	  lvextend
+
+逻辑卷也支持缩减
+ext4文件系统支持缩减
+xfs文件系统不支持缩减
+
+卷组划分空间的单位   PE
+vgdisplay 卷组                                         #显示卷组详细信息
+PE Size      4.00 MiB
+
+###################################################
+创建逻辑卷
+1.创建卷组
+   命令格式: vgcreate  卷组名    分区设备路径......
+[root@server0 ~]# vgcreate systemvg /dev/vdc[1-2]
+[root@server0 ~]# pvs                                  #查看物理卷基本信息
+[root@server0 ~]# vgs                                  #查看卷组基本信息
+
+2.创建逻辑卷
+   命令格式: lvcreate -n 逻辑卷名  -L  大小    基于的卷组名
+[root@server0 ~]# lvcreate -n mylv -L 16G systemvg 
+[root@server0 ~]# lvs                                  #查看逻辑卷基本信息
+
+
+3.使用逻辑卷
+[root@server0 ~]# ls /dev/dm-0
+[root@server0 ~]# ls /dev/systemvg/mylv 
+[root@server0 ~]# ls -l /dev/systemvg/mylv
+
+[root@server0 ~]# mkfs.xfs /dev/systemvg/mylv
+[root@server0 ~]# blkid /dev/systemvg/mylv
+[root@server0 ~]# vim /etc/fstab 
+ /dev/systemvg/mylv  /nsd  xfs  defaults  0 0
+
+[root@server0 ~]# mkdir /nsd
+[root@server0 ~]# mount -a
+[root@server0 ~]# df -h
+
+#################################################
+
+逻辑卷扩大
+
+一  卷组有足够的剩余空间                      
+1.空间的扩展
+lvextend -L 18G /dev/systemvg/mylv 
+
+2.文件系统的扩展
+   扩展xfs文件系统命令: xfs_growfs 
+   扩展ext4文件系统命令: resize2fs 
+
+[root@server0 ~]# df -h
+[root@server0 ~]# xfs_growfs /dev/systemvg/mylv 
+
+二 卷组没有足够的剩余空间
+1.先扩展卷组的空间               vgextend systemvg /dev/vdb
+2.逻辑卷空间的扩展               lvextend -L 25G /dev/systemvg/mylv 
+3.逻辑卷文件系统的扩展            xfs_growfs /dev/systemvg/mylv 
+
+例子:请划分一个大小为250M的逻辑卷                 lvcreate -n lvtest -L 250M systemvg
+    请划分一个为800个PE大小的逻辑卷               lvcreate -n lvnsd -l 800 systemvg   
+-l:指定PE的个数
+
+逻辑卷的删除
+删除卷组前提:基于该卷组创建的,所有逻辑卷都要删除:   lvremove /dev/卷组/逻辑卷 --> lvremove /dev/卷组
+
+
+
+
+
