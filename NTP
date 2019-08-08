@@ -1,0 +1,26 @@
+NTP时间同步
+date                            查看系统时间 
+date -s  '年-月-日    时:分:秒'   修改时间格式   
+
+例子
+date -s '2000-10-1  12:10:08'
+
+NTP网络时间协议
+• Network Time Protocol
+– NTP服务器为客户机提供标准时间
+– NTP客户机需要与NTP服务器保持沟通
+
+NTP时间服务器:虚拟机classroom
+
+软件包:    chrony                           与时间服务器沟通软件
+配置文件:  /etc/chrony.conf                 指定时间服务器位置
+重启服务包: chronyd 
+vim  /etc/chrony.conf 
+#server 0.rhel.pool.ntp.org iburst
+#server 1.rhel.pool.ntp.org iburst
+#server 2.rhel.pool.ntp.org iburst
+server 服务器域名  iburst                     指定服务端位置
+
+systemctl  restart chronyd 
+systemctl  enable chronyd                   开机自启动
+
