@@ -1,0 +1,30 @@
+ind高级使用
+
+– find [目录] [条件1] [-a|-o] [条件2] ...
+– 常用条件表示:                                     
+  -type 类型(f、d、l)
+	-name "文档名称"
+	-size +|-文件大小(k、M、G)
+	-user 用户名
+	-mtime 根据文件修改时间
+  
+   例子
+-type 类型(f文本文件、d目录、l快捷方式)        find /boot  -type l/f/d
+-name '文档名称'                            find /etc/  -name  '*tab'
+-size +|-文件大小(k、M、G)                  find /boot/ -size +10 
+-mtime 根据文件修改时间(都是过去时间)          find /var/   -mtime +90     
+ +10:十天之前,-10:最近十天之内
+-user 用户名                               find  /home  -user student
+ 
+ ###################################################################
+ 
+ find扩展使用
+• 使用find命令的 -exec 操作
+– find .. .. -exec 处理命令 {} \;
+– 优势:以 {} 代替每一个结果,逐个处理,遇 \; 结束
+
+ 例子
+find /boot/ -name 'vm*'  -exec  cp  {}  /opt/  \;
+find /boot/ -size +10M  -exec  cp  {}  /opt/  \; 
+
+
