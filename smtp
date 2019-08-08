@@ -1,0 +1,87 @@
+基础邮件服务
+
+邮件域名:
+   server0.example.com
+
+邮箱帐号:
+   yg@server0.example.com
+
+
+• 电子邮件服务器的基本功能
+– 为用户提供电子邮箱存储空间(用户名@邮件域名)
+– 处理用户发出的邮件 —— 传递给收件服务器
+– 处理用户收到的邮件 —— 投递到邮箱
+
+邮件服务器的类型 ——
+    普通邮件服务器：向外发送邮件、存储及投递邮件
+    空客户端邮件服务器：向外发送邮件，不存储不投递邮件
+
+邮箱用户 ---> 普通邮件服务器 
+
+邮箱用户 ---> 空客户端邮件服务器 ---> 后端邮件服务器
+
+软件包：postfix
+系统服务：postfix
+配置文件：/etc/postfix/main.cf
+
+314行:relayhost = [smtp0.example.com]        后端邮件服务器
+113行inet_interfaces = loopback-only         仅本机
+98行myorigin = desktop0.example.com         发件来源域
+264行mynetworks = 127.0.0.0/8, [::1]/128    信任网络
+164行mydestination =                        此的值设为空
+137行local_transport = error:local delivery disabled 自定义报错
+
+测试方法：
+    在server0，发一封邮件给本机的student用户
+echo  '邮件正文'  |  mail  -s  邮件标题  收件人地址
+
+    在desktop0上的student用户能收到这封邮件
+mail  -u  用户名
+
+mail -s “dai” student </etc/passwd         #发信测试      
+[root@server0 ~]#mail –u student           #发信测试
+No mail for student
+
+Desktop0:(改主机名)
+[root@desktop0 ~]# mail -u student         #后端服务器上可收到这封邮件
+
+
+
+快速部署postfix邮件服务器
+1.装postfix软件包
+[root@A ~]# rpm -q postfix
+postfix-2.10.1-6.el7.x86_64
+
+2.修改配置文件/etc/postfix/main.cf 
+
+99  myorigin = server0.example.com     #默认补全域名后缀
+
+116 inet_interfaces = all              #允许本机所有网卡提供邮件服务
+
+164 mydestination = server0.example.com #此值判断为本域邮件
+
+3.重启服务                                                      
+[root@A ~]# systemctl  restart  postfix
+
+
+测试邮件收发
+[root@A ~]# useradd yg
+[root@A ~]# useradd xln
+
+•发信操作: mail -s '邮件标题'    -r  发件人      收件人
+[root@A ~]# mail -s 'test01' -r yg  xln
+ahahxixihehelele
+.
+EOT
+[root@A ~]# echo AAA | mail -s 'test02' -r yg  xln
+
+•收信操作: mail [-u 用户名]
+[root@A ~]# mail -u xln
+>N  1 yg@server0.example.c  Fri May 17 15:28  18/565   
+& 1     #输入邮件编号1回车查看邮件的内容
+
+
+
+
+
+
