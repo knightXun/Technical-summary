@@ -246,7 +246,6 @@ mysql: [Warning] Using a password on the command line interface can be insecure.
 [root@mysql22 ~]#
 
 步骤三：启动maxsacle服务
-
 1）启动服务
 
 [root@maxscale77 ~]#
