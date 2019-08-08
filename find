@@ -1,4 +1,4 @@
-ind高级使用
+find高级使用
 
 – find [目录] [条件1] [-a|-o] [条件2] ...
 – 常用条件表示:                                     
@@ -26,5 +26,141 @@ ind高级使用
  例子
 find /boot/ -name 'vm*'  -exec  cp  {}  /opt/  \;
 find /boot/ -size +10M  -exec  cp  {}  /opt/  \; 
+
+#############################################################################################
+
+
+grep针对文本文件内容进行过滤
+
+• 常用命令选项                  例子:
+– -v,取反匹配                  grep -v root /etc/passwd        
+– -i,忽略大小写                grep -i ROOT /etc/passwd
+
+
+• 常用的匹配模式                  例子:
+– word 包含字符串word             grep ^root /etc/passwd   
+– ^word 以字符串word开头          grep root$ /etc/passwd
+– word$ 以字符串word结尾
+– ^$:匹配空行
+
+显示/etc/login.defs文件有效信息(去除注释  去除空行)
+grep -v ^# /etc/login.defs                                     去除注释  
+grep -v ^# /etc/login.defs | grep   -v ^$                      去除空行
+grep -v ^# /etc/login.defs | grep   -v ^$  >  /opt/1.txt   
+
+
+
+正则表达式,用来查找过滤文档的工具符号
+grep "root"        user                                        在user文档中查找有单词root的行
+grep "^root"       user                                        在user文档中查找以单词root开头的行
+grep "bash$"       user                                        在user文档中查找以单词bash结尾的行
+grep "^$"          user                                        查找空行
+grep "^ "          user                                        查找以空格开头的行
+grep "[rot]"       user                                        查找字母r或者o或者t
+grep "roo[tn]"     user                                        查找root或者roon
+grep "[^rot]"      user                                        查找字母r或者o或者t之外的内容
+grep "[a-z]"       user                                        查找小写字母
+grep "[A-Z]"       user                                        查找大写字母
+grep "[a-Z]"       user                                        查找所有字母
+grep "[0-9]"       user                                        查找数字
+
+grep "r..t"          user                                      查找以r开头t结尾中间有2个任意字符的单词
+grep "ro*"           user                                      查找以r开头后面有或没有字母o的单词,o可以出现任意次
+grep  "o\{1,2\}"     user                                      查找o出现1次到2次的行
+grep  "o\{2,3\}"     user                                      查找o出现2次到3次的行
+grep  "o\{2\}"       user                                      查找o出现2次的行
+grep "o\{1,\} "      user                                      查找o出现1次以及1次以上
+grep  "\(:0\)\{2\}"  user                                      查找:0(数字零)连续出现2次的行
+
+扩展正则
+egrep  "o+"            user                                    查找o出现1次以及1次以上
+egrep  "o?"            user                                    查找o出现0次或1次
+egrep  "o{1,2}"        user                                    查找o出现1次到2次的行
+egrep  "o{2,3}"        user                                    查找o出现2次到3次的行
+egrep  "o{2}"          user                                    查找o出现2次的行
+egrep  "o{1,}"         user                                    查找o出现1次以及1次以上
+egrep  "(:0){2}"       user                                    查找:0(数字零)连续出现2次的行
+egrep  "bash|nologin"  user                                    查找bash或者nologin
+egrep  "\bthe\b"  a                                            查找单词the,前后是空格或者特殊符号
+
+
+############################################################################################################
+
+vim 交互式文本编辑工具
+sed 流式编辑器,能对文档执行增删改查等操作,逐行操作,非交互式
+sed使用方式:
+前置命令  |  sed 选项  (定址符)指令
+sed 选项  (定址符)指令   文档
+选项
+-n 屏蔽默认输出
+-i 写入到文件
+-r 使用扩展正则
+指令
+p 输出文档内容
+d 删除
+s 替换
+
+
+sed -n 'p'           user                                        使用sed输出user文档中所有行
+sed -n '1p'          user                                        使用sed输出user文档中第1行
+sed -n '1,3p'        user                                        使用sed输出user文档中第1行到第3行
+sed -n '1,+3p'       user                                        输出user文档中第1行以及后面的3行
+sed -n '1p;4p'       user                                        输出第1行和第4行
+sed -n '1~2p'        user                                        输出奇数行
+sed -n '2~2p'        user                                        输出偶数行
+
+
+使用正则做定址符
+sed -n '/root/p'             /etc/passwd    //指令前面添加2个斜杠,中间使用正则,查找有root单词的行
+sed -n '/bash$/p'            /etc/passwd
+sed -rn '/bash|nologin/p'    user  //竖线"|" 是扩展正则,要加-r选项
+sed -n '='                   user   //显示行号
+sed -n '$='                  user   //显示最后一行的行号
+sed  'd'                     user   //使用sed删除 user文档中所有行
+sed  '1d'                    user   //使用sed删除user文档中第1行
+sed  '1,3d'                  user   //使用sed删除user文档中第1行到第3行
+sed  '1,+3d'                 user  //使用sed删除user文档中第1行以及后面3行
+
+替换:
+s/旧内容/新内容/ 或者 s$旧内容$新内容$  等符号
+sed 's/2017/AAAA/'                   test.txt   //替换所有行的第1个2017为AAAA
+sed 's/2017/AAAA/g'                  test.txt  //替换所有行的所有2017为AAAA
+sed 's/2017/AAAA/2'                  test.txt  //替换所有行的第2个2017为AAAA
+sed '1s/2017/AAAA/'                  test.txt  //替换第1行的第1个2017为AAAA
+sed '2s/2017/AAAA/2'                 test.txt  //替换第2行的第2个2017为AAAA
+sed '3s/2017/AAAA/3;3s/2017/AAAA/2;' test.txt   //替换第3行的第3个, 然后在替换第3行的第2个
+sed '3s/2017/AAAA/2;3s/2017/AAAA/2;' test.txt   //效果同上
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
