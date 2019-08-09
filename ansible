@@ -1,4 +1,4 @@
-   
+#!/bin/bash
    
     ansibe是2013年推出的一款IT自动化和DevOps软件,2015年被RedHat收购.基于Python
 开发的,糅合很多老运维工具的优点,实现了批量操作系统配置,批量程序部署,批量运行命令等功能
@@ -51,20 +51,27 @@ insible 定义托管主机地址配置文件路径名
 insible 指定的配置文件,写入远程主机的地址
 
 自定义主机定义与分组规则
-                                                     例子:
+                                                  例子:
 mkdir /目录                                        mkdir /root/dc
 cd /目录                                           cd /root/dc                                   
-vim /目录/ansible.cfg                             vim /dc/ansible.cfg
+vim /目录/ansible.cfg                              vim /dc/ansible.cfg
 [defaults]                                         [defaults]
 inventory      = /目录/定义托管主机地址配置文件路径名    nventory = /dc/hosts
 host_key_checking = False                          host_key_checking = False                        
 vim /目录/定义托管主机地址配置文件路径名                vim /dc/hosts(可以写脚本)
-[组名称]                                             [web]
-主机名称或IP地址,其他参数                               web1
-                                                     db1
+[组名称]                                            [web]
+主机名称或IP地址,其他参数                              web1
+                                                    db1
+
+动态主机
+ansible Inventtory
+静态Inventtory:指在文件/etc/ansible/hosts中指定的主机和组
+动态Inventtory:指通过在外部脚本获取主机列表,按照其要求格式返回给ansilbe命令
+json:一种基于文本独立于语言的轻量级数据交换格式
 
 
-web
+
+
 部署ansible
 
 软件包:
@@ -75,7 +82,7 @@ python-httplib2-0.9.2-1.el7.noarch.rpm   sshpass-1.06-2.el7.x86_64.rpm
 
 mkdir /var/ftp/ansible
 cp * /var/ftp/ansible/                           将6个包放入 /var/ftp/ansible/
-createrepo /var/ftp/ansible                      生成仓库数据文件
+createrepo 共享文件路径                            生成仓库数据文件
 
 配置yum客户端
 vim /etc/yum.repos.d/local.repo 
@@ -130,7 +137,7 @@ cd /root/.ssh/                                      部署证书文件
 ssh-keygen -t rsa -b 2048 -N '' -f key
 
 ssh-copy-id -i key.pub  主机名称                     给所有主机部署秘钥                        
-
+/root/.ansible/cp                                   缓存文件
 
 inventory扩展参数
 ansible_ssh_port                                    ssh端口号:如果不是默认的端口号,通过此变量设置
@@ -139,6 +146,7 @@ ansible_ssh_pass                                    ssh密码(这种不安去,�
 ansible_ssh_private_key_file                        ssh使用的私钥文件,适用于有多个秘钥
 
 vars                                                变量定义,用于组名后面
+
 例子:
 [all:vars]
 ansible_ssh_private_key_file="/root/.ssh/key"
@@ -149,43 +157,34 @@ children                                            子组定义,用于引用其
 -web
 -db
 
-/root/.ansible/cp                                   缓存文件
-
-
-
-
 批量配置管理
 模块
 
 -ansible-doc                                        模块的手册相当于shell的man,很重要    
 ansible-doc -l                                      列出所有模块
-ansible-doc modulename                              查看帮助
+ansible-doc      模块名                              查看帮助
 
 -ping模块                                            测试网络连通性,ping模块没有参数
-ansible host-pattern -m ping                        注:测试ssh的连通性                            
+ansible 主机模式 -m ping                             注:测试ssh的连通性                            
 ansible all -m command -a 'uptime'                  查看所有机器的负载
-
+ 
 command模块(默认模块)
-"<" ">" "|" "&" 有这些命令会执行不成功 
-command模块不能解析系统变量
-ansible -a '执行命令'
-ansible web -a 'df -h'
-ansible db -m command -a 'free -h'
+                                                      "<" ">" "|" "&" 有这些命令会执行不成功 
+                                                      command模块不能解析系统变量
+                                                      ansible -a '执行命令'
+                                                      ansible web -a 'df -h'
+                                                      ansible db -m command -a 'free -h'
    
-
-
 shell模块
 用法和command一样,区别是可以执行任意命令
 不能执行交互式的命令,例如vim top
 ansible db -m shell -a 'ps -ef |grep sshd'
-
-
-ansible web -m shell -a "echo ${HOSTNAME}" = "echo ansible"           
--ansible执行命令是二次解析,第一次在本机解析,第二次在执行机器解析
+ansible web -m shell -a "echo ${HOSTNAME}" = "echo ansible"  双引号("")里面的$有意义         
+输出本机ip:ansible
+-ansible执行命令是二次解析,第一次在本机解析,第二次在执行机器解析      单引号('')里面的字符都没有意义 
 -需要第二次解析的变量要转义(\)
-
 ansible web -m shell -a 'echo ${HOSTNAME}'
-
+输出 web
 
 
 script模块
@@ -237,7 +236,9 @@ filter过滤所需信息
 
 ansible cache -m setup  | grep ans
 
-
+if
+done 
+fi
 
 
 
