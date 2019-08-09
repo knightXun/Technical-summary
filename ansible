@@ -58,7 +58,7 @@ vim /目录/ansible.cfg                             vim /dc/ansible.cfg
 [defaults]                                         [defaults]
 inventory      = /目录/定义托管主机地址配置文件路径名    nventory = /dc/hosts
 host_key_checking = False                          host_key_checking = False                        
-vim /目录/定义托管主机地址配置文件路径名                vim /dc/hosts
+vim /目录/定义托管主机地址配置文件路径名                vim /dc/hosts(可以写脚本)
 [组名称]                                             [web]
 主机名称或IP地址,其他参数                               web1
                                                      db1
@@ -124,7 +124,7 @@ ansible 主机集合 -m 模块名称 -a 模块参数
 -v 显示详细信息
 
 ansible all --list-hosts                            列出要执行的主机
-ansible web -m  ping -k                             批量检测主机
+ansible web -m  ping -k                             批量检测主机,测试ssh的连通性
 
 cd /root/.ssh/                                      部署证书文件
 ssh-keygen -t rsa -b 2048 -N '' -f key
@@ -154,16 +154,88 @@ children                                            子组定义,用于引用其
 
 
 
+批量配置管理
+模块
+
+-ansible-doc                                        模块的手册相当于shell的man,很重要    
+ansible-doc -l                                      列出所有模块
+ansible-doc modulename                              查看帮助
+
+-ping模块                                            测试网络连通性,ping模块没有参数
+ansible host-pattern -m ping                        注:测试ssh的连通性                            
+ansible all -m command -a 'uptime'                  查看所有机器的负载
+
+command模块(默认模块)
+"<" ">" "|" "&" 有这些命令会执行不成功 
+command模块不能解析系统变量
+ansible -a '执行命令'
+ansible web -a 'df -h'
+ansible db -m command -a 'free -h'
+   
+
+
+shell模块
+用法和command一样,区别是可以执行任意命令
+不能执行交互式的命令,例如vim top
+ansible db -m shell -a 'ps -ef |grep sshd'
+
+
+ansible web -m shell -a "echo ${HOSTNAME}" = "echo ansible"           
+-ansible执行命令是二次解析,第一次在本机解析,第二次在执行机器解析
+-需要第二次解析的变量要转义(\)
+
+ansible web -m shell -a 'echo ${HOSTNAME}'
 
 
 
+script模块
+在本地写脚本,然后使用script模块批量执行
+
+例子:
+vim nb.sh
+!/bin/bash
+id nb
+if [ $? != 0 ];then
+useradd wk
+echo 456 | passwd --stdin wk
+fi
+
+ansible web -m script -a nb.sh
+
+yum模块
+name:软件包名称
+state:动作(installed, removed)
+ansible -m yum -a 'name=mariadb state=installed'
 
 
+service模块 
+name:服务名称 
+enabled:是否开机启动 yes|no  
+state:对服务执行启动,停止,重启,重新加载(started, stoppped, restarted, reloaded)
+ansible db -m service -a 'name=mariadb state=started enabled=yes'
 
 
+copy模块    src:本地路径  dest:远程主机路径          
+ansible db -m copy -a 'src=/tmp/dd dest=/etc/my.cnf '
 
+linelifile模块  整行处理
+类似于sed的一种行编辑替换模块
+path:  目标文件文件
+regrep:正则
+line:  修改后的样子
+ansible db -m lineinfile -a 'path=/etc/my.cnf regexp="^binlog-format"
+line="binlog-format = row"'
 
+replace模块 只替换匹配的关键字
+类似于sed的一种行编辑替换模块
+ansible db -m replace -a 'path=/etc/my.cnf regexp="row" replace="mixed"'
 
+setup模块
+主要用于获取主机信息,playbooks里经常会用的另一个参数gather_facts与该模块相关
+参数filter
+filter过滤所需信息
+
+ansible cache -m setup  | grep ans
 
 
 
