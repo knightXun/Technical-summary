@@ -1,0 +1,187 @@
+   
+   
+    ansibe是2013年推出的一款IT自动化和DevOps软件,2015年被RedHat收购.基于Python
+开发的,糅合很多老运维工具的优点,实现了批量操作系统配置,批量程序部署,批量运行命令等功能
+
+ansible可以实现:
+-自动化部署APP
+-自动化管理配置项
+-自动化持续交付
+-自动化(AWS)云服务管理
+
+ansible优点:
+-只需要SSH和Python即可使用
+-无客户端
+-功能强大,模块丰富
+-基于Python开发,做二次开发更容易
+-社区活跃
+
+ansible特性:
+-模块化设计,调用特定的模块完成特定任务
+-基于Python语言实现
+  paramiko
+  PyYAML(半结构语言)
+  Jinja2
+-其模块支持JSON等标准输出格式,可以采用任何编程语言重写
+-部署简单
+-主从模式工作
+-支持自定义模块
+-支持Playbook(平板电脑)
+-支持多层部署
+-支持异构IT环境
+
+ansible工作流程,两大核心指标(原理) 
+ 主机的集合:抓取全量机器&分组列表;使用Host-pattern过滤机器列表
+ 命令的集合:根据参数确定执行模块和配置
+主机的执行是并发的();命令的执行是顺序的(干什么事)
+host1    cmd1
+host2    cmd2
+
+主机管理
+-主机定义与分组
+安装ansible后可以做一些简单的任务
+ansible配合文件查找顺序
+-首先检测ANSIBLE_CONFIG变量的配置文件
+-其次检查当前目录下的./ansible.cfg文件
+-再次检查当前用户家目录下~/ansible.cfg文件
+-最后检查/etc/ansible.cfg是ansible的默认配置文件路径
+
+ansible.cfg配置文件
+insible 定义托管主机地址配置文件路径名
+insible 指定的配置文件,写入远程主机的地址
+
+自定义主机定义与分组规则
+                                                     例子:
+mkdir /目录                                        mkdir /root/dc
+cd /目录                                           cd /root/dc                                   
+vim /目录/ansible.cfg                             vim /dc/ansible.cfg
+[defaults]                                         [defaults]
+inventory      = /目录/定义托管主机地址配置文件路径名    nventory = /dc/hosts
+host_key_checking = False                          host_key_checking = False                        
+vim /目录/定义托管主机地址配置文件路径名                vim /dc/hosts
+[组名称]                                             [web]
+主机名称或IP地址,其他参数                               web1
+                                                     db1
+
+
+web
+部署ansible
+
+软件包:
+ansible-2.4.2.0-2.el7.noarch.rpm         python-paramiko-2.1.1-4.el7.noarch.rpm
+python2-jmespath-0.9.0-3.el7.noarch.rpm  python-passlib-1.6.5-2.el7.noarch.rpm
+python-httplib2-0.9.2-1.el7.noarch.rpm   sshpass-1.06-2.el7.x86_64.rpm
+
+
+mkdir /var/ftp/ansible
+cp * /var/ftp/ansible/                           将6个包放入 /var/ftp/ansible/
+createrepo /var/ftp/ansible                      生成仓库数据文件
+
+配置yum客户端
+vim /etc/yum.repos.d/local.repo 
+[local]
+name=local
+baseurl="ftp://192.168.1.254/ansible"
+enabled=1
+gpgcheck=0
+
+yum -y install ansible                             装包,yum将依赖安装
+ansible --version                                  查看版本
+
+
+vim  /etc/hosts                                    只在ansible主机,主机名映射
+192.168.1.40 ansible
+192.168.1.41 web1
+192.168.1.42 web2
+192.168.1.43 db1
+192.168.1.44 db2
+192.168.1.45 cache
+
+vim /etc/ansible/ansible.cfg
+ 14行  inventory                                     定义主机集合,去掉注释
+ 61行  host_key_checking = False                     验证配置参数,为False安装过程中不输yes,True则相反          
+
+vim /etc/ansible/hosts                               主机定义与分组;手动添加
+
+[web]                                                分组
+web1                                                 机器数量
+web2
+[db]                                                 分组
+db[1:2]                                              机器数量
+[other]                                              分组
+cache                                                机器数量
+
+
+ansible命令基础:                               
+ansible 主机集合 -m 模块名称 -a 模块参数           
+-主机集合 主机名或分组名,多个使用"逗号"分隔          
+-m 模块名称, 默认command模块
+-a or --args模块参数
+其他参数
+-i inventory文件路径,或执行脚本
+-k 使用交互式登录密码
+-e 定义变量
+-v 显示详细信息
+
+ansible all --list-hosts                            列出要执行的主机
+ansible web -m  ping -k                             批量检测主机
+
+cd /root/.ssh/                                      部署证书文件
+ssh-keygen -t rsa -b 2048 -N '' -f key
+
+ssh-copy-id -i key.pub  主机名称                     给所有主机部署秘钥                        
+
+
+inventory扩展参数
+ansible_ssh_port                                    ssh端口号:如果不是默认的端口号,通过此变量设置
+ansible_ssh_user                                    默认的ssh用户名
+ansible_ssh_pass                                    ssh密码(这种不安去,建议使用--ask-pass或ssh秘钥)
+ansible_ssh_private_key_file                        ssh使用的私钥文件,适用于有多个秘钥
+
+vars                                                变量定义,用于组名后面
+例子:
+[all:vars]
+ansible_ssh_private_key_file="/root/.ssh/key"
+
+children                                            子组定义,用于引用其他组名称
+例子:
+[app:children]
+-web
+-db
+
+/root/.ansible/cp                                   缓存文件
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
