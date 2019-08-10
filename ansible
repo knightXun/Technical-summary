@@ -122,7 +122,7 @@ playbook是ansible用于配置,部署和管理托管主机剧本,通过playbook�
 以及组织计算机处理各种各样的事情
 
 例子:
-vim  ping.yaml
+vim  ping.yml
 ---
  - hosts: all
    remote_user: root
@@ -133,7 +133,7 @@ vim  ping.yaml
 
 变量
 例子:
-vim user.yaml 
+vim user.yml 
 ---
  - hosts: web
    remote_user: root
@@ -143,18 +143,19 @@ vim user.yaml
    - user:
        name: "{{username}}"
        group: users
-   - shell: echo 123 |passwd --stdin "{{username}}"
-   
-   
+   - shell: echo 123 |passwd --stdin "{{username}}" 或  加密密码
+   password: "{{'123'|passwd_hash('sha512')}}"      
+                                                      
+ /etc/login.defs                                        linux加密文件
+ENCRYPT_METHOD SHA512                                   加密算法
+  
    
 *********************************************************************************
-/etc/login.defs                                      linux加密文件
-ENCRYPT_METHOD SHA512                                加密算法
 
 
 例子:
-方式1                                                 编写yaml文件
-vim user.yaml                                        
+方式1                                                 编写yml文件
+vim user.yml                                        
 ---
  - hosts: web
    remote_user: root
@@ -168,12 +169,82 @@ ansible-playbook user.yaml -e '{"username": plj}'    在外面传参
 
 
 方式2
-vim 文件.yaml                                         编写JinJa2格式yaml文件
+vim 文件.yml                                         编写JinJa2格式yml文件
 ---
 username:
   
-
 ansible-playbook user.yaml -e @args.yaml              在外面用json格式传参
+
+对于创建缓存目录时
+ignore_errors: True                                    脚本执行错误时,继续执行下去
+
+
+
+************************************************************************************
+例子:
+
+---
+ - hosts: web
+   remote_user: root
+   tasks:
+    - copy:
+        src: httpd.conf/httpd.conf
+        dest: /etc/httpd/conf/httpd.conf
+        owner: root
+        group: root
+        mode: 0644
+      tags: abc                                               打标签名
+      notify:                                                 定义触发列表
+        - reload apache
+    - copy:
+        src: index.html
+        dest: /var/www/html/index.html
+        owner: apache
+        group: apache
+        mode: 0644
+      tags: bcd                                                标签名
+   handlers:                                                   触发器
+    - name: reload apache
+      service:
+        name: httpd
+        state: restarted
+tags 标签名
+notify  触发列表
+handlers 触发器
+测试:ansible-playbook yaml.文件 -t 标签名
+
+****************************************************************************************
+
+when:进行条件判断,需要在满足特定的条件后在触发某一项操作
+
+register:保存前一个命令的返回状态,在后面进行调用
+
+uptime | awk '{printf ("%.2f",$(NF-2))}'                      查看系统负载均衡
+
+例子:针对运行命令结果的返回值做判定,当系统负载超过一定值的时候做特殊处理
+vim  文件.yml
+---
+- hosts: web
+  remote_user: root
+  tasks:
+    - shell: uptime | awk '{printf ("%.2f",$(NF-2))}'  
+      register: result(自定义名字)
+    - service:
+        name: httpd
+        state: stopped
+      when: result.stdout|float > 0.7 
+
+
+*************************************************************************************************
+with_items:用于迭代一个列表或字典,通过{{item}获取每次迭代的值
+
+
+
+
+
+
+
+
 
 
 
@@ -345,27 +416,6 @@ setup模块
 filter过滤所需信息
 
 ansible cache -m setup  | grep ans
-
-if
-done 
-fi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
