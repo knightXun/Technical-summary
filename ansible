@@ -67,7 +67,70 @@ vim /目录/定义托管主机地址配置文件路径名                vim /dc
 ansible Inventtory
 静态Inventtory:指在文件/etc/ansible/hosts中指定的主机和组
 动态Inventtory:指通过在外部脚本获取主机列表,按照其要求格式返回给ansilbe命令
-json:一种基于文本独立于语言的轻量级数据交换格式
+
+*************************************************************************************
+
+json:json是javaScript对象表示法,一种基于文本独立于语言的轻量级数据交换格式
+json中的分隔符限于单引号" ' " 小括号"()" 中括号"[]" 大括号"{}" 冒号 ":" 逗号 ","
+JSON格式:名称/值对 例子 
+特性
+纯文本
+具有层级结构(值中存在值)
+
+语法规则
+键值都是字符串,要hash解析
+数据由逗号分隔:  ,
+
+大括号保存对象: 也叫键值对[key:data]   {"键值":"键值"}         {"媳妇":"丈夫"}
+
+中括号保存数组: [data1,data2,data3]   ["value":"value","value","value"]  
+{ "成员":
+ ["dc","tc","zhangsan"]
+}  
+
+******************************************************************************************
+
+
+YAML简介
+YAML的结构通过空格来展示
+数组用减号表示 "-"
+键值用冒号表示 ":"   成员      
+成员:
+ -
+  姓名: 牛牛
+  爱好: 铁粗
+ -
+  姓名: 凯子
+  爱好: 喝可乐
+ -
+  姓名: 丁丁
+  爱好: 和雪碧
+key: value (用 冒号空格value记忆
+
+JinJa2模板
+模板表达式"{{value }}"                调用变量{{HOSTNAME}}  计算{{2+3}}  判断{{1 新[1,2,3]}}
+控制语句"{%value%}"
+模板支持注释"{#value#}"
+过滤器: (|)  {{cmd1 |cmd2 (cmd3)}}    变量可以通过过滤器修改.过滤器与变量用管道符号(|)分割,
+                                     也可以用圆括号传递可选参数,多个过滤器可以链式调用,前一
+                                     个过滤器的输出会被作为后一个过滤器的输入
+
+playbook
+playbook是ansible用于配置,部署和管理托管主机剧本,通过playbook的详细描述,执行一系列tasks
+通俗说:是一个剧本,现实中由演员按剧本表演,在ansible中由计算机进行安装,部署应用,提供对外服务,
+以及组织计算机处理各种各样的事情
+
+例子:
+vim  ping.yaml
+---
+ - hosts: all
+   remote_user: root
+   tasks:
+    - ping: 
+
+
+
+
 
 
 
@@ -204,7 +267,7 @@ ansible web -m script -a nb.sh
 yum模块
 name:软件包名称
 state:动作(installed, removed)
-ansible -m yum -a 'name=mariadb state=installed'
+ansible db -m yum -a 'name=mariadb-server state=installed'
 
 
 service模块 
@@ -239,6 +302,15 @@ ansible cache -m setup  | grep ans
 if
 done 
 fi
+
+
+
+
+YAML简介
+YAML的结构通过空格来展示
+数组用减号表示 "-"
+键值用冒号表示 ":"   成员
+key: value (用 冒号空格value记忆)
 
 
 
