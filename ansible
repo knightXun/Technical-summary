@@ -228,7 +228,7 @@ vim  文件.yml
   remote_user: root
   tasks:
     - shell: uptime | awk '{printf ("%.2f",$(NF-2))}'  
-      register: result(自定义名字)
+      register: result(对象)      可看debug模块
     - service:
         name: httpd
         state: stopped
@@ -243,9 +243,12 @@ with_items:用于迭代一个列表或字典,通过{{item}获取每次迭代的�
 
 
 
-
-
-
+debug   调试
+ansible-playbook --syntax-check 文件.yaml    检测语法 
+ansible-playbook -C  文件.yaml               测试运行
+--list-hosts                                显示受到影响的主机
+--list-tasks                                显示工作的task 
+--list-tags                                 显示将要运行的tag
 
 
 
