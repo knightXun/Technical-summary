@@ -70,6 +70,7 @@ ansible Inventtory
 
 *************************************************************************************
 
+json语法
 json:json是javaScript对象表示法,一种基于文本独立于语言的轻量级数据交换格式
 json中的分隔符限于单引号" ' " 小括号"()" 中括号"[]" 大括号"{}" 冒号 ":" 逗号 ","
 JSON格式:名称/值对 例子 
@@ -91,7 +92,7 @@ JSON格式:名称/值对 例子
 ******************************************************************************************
 
 
-YAML简介
+YAML简介语法
 YAML的结构通过空格来展示
 数组用减号表示 "-"
 键值用冒号表示 ":"   成员      
@@ -107,7 +108,7 @@ YAML的结构通过空格来展示
   爱好: 和雪碧
 key: value (用 冒号空格value记忆
 
-JinJa2模板
+JinJa2模板语法
 模板表达式"{{value }}"                调用变量{{HOSTNAME}}  计算{{2+3}}  判断{{1 新[1,2,3]}}
 控制语句"{%value%}"
 模板支持注释"{#value#}"
@@ -130,6 +131,49 @@ vim  ping.yaml
 
 
 
+变量
+例子:
+vim user.yaml 
+---
+ - hosts: web
+   remote_user: root
+   vars: 
+     username: l4
+   tasks:
+   - user:
+       name: "{{username}}"
+       group: users
+   - shell: echo 123 |passwd --stdin "{{username}}"
+   
+   
+   
+*********************************************************************************
+/etc/login.defs                                      linux加密文件
+ENCRYPT_METHOD SHA512                                加密算法
+
+
+例子:
+方式1                                                 编写yaml文件
+vim user.yaml                                        
+---
+ - hosts: web
+   remote_user: root
+   tasks:
+   - user:
+       name: "{{username}}"
+       group: users
+   - shell: echo 123 |passwd --stdin "{{username}}"
+   
+ansible-playbook user.yaml -e '{"username": plj}'    在外面传参
+
+
+方式2
+vim 文件.yaml                                         编写JinJa2格式yaml文件
+---
+username:
+  
+
+ansible-playbook user.yaml -e @args.yaml              在外面用json格式传参
 
 
 
@@ -265,7 +309,10 @@ fi
 ansible web -m script -a nb.sh
 
 yum模块
-name:软件包名称
+name:软件包名称- service:
+    name: httpd
+    state: started
+
 state:动作(installed, removed)
 ansible db -m yum -a 'name=mariadb-server state=installed'
 
@@ -280,10 +327,10 @@ ansible db -m service -a 'name=mariadb state=started enabled=yes'
 copy模块    src:本地路径  dest:远程主机路径          
 ansible db -m copy -a 'src=/tmp/dd dest=/etc/my.cnf '
 
-linelifile模块  整行处理
+lineinfile模块  整行处理
 类似于sed的一种行编辑替换模块
 path:  目标文件文件
-regrep:正则
+regexp:正则
 line:  修改后的样子
 ansible db -m lineinfile -a 'path=/etc/my.cnf regexp="^binlog-format"
 line="binlog-format = row"'
@@ -306,11 +353,6 @@ fi
 
 
 
-YAML简介
-YAML的结构通过空格来展示
-数组用减号表示 "-"
-键值用冒号表示 ":"   成员
-key: value (用 冒号空格value记忆)
 
 
 
