@@ -144,38 +144,13 @@ curl -XPOST 'http://192.168.1.55:9200/tedu/student/1/_update' -d {
 }
 
 
+curl -XGET http://192.168.1.55:9200/tedu/student/1                                   查询
 
-查询
-curl -XGET http://192.168.1.55:9200/tedu/student/1
+curl -XDELETE 'http://192.168.1.55:9200/tedu/student/1'                              删除
 
-删除
-curl -XDELETE 'http://192.168.1.55:9200/tedu/student/1'
-
-
-gunzip shakespeare.json.gz   解压
-
-
+gunzip shakespeare.json.gz                                                           解压
 
 curl -XPOST 'http://192.168.1.54:9200/accounts/_bulk' --data-binary @accounts.json   导入数据
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
