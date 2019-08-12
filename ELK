@@ -1,0 +1,91 @@
+
+日志文件的删除,备份要分析日志的重要性
+ELK分别代表
+Elasticsearch: 负责日志检索和存储         (核心数据,重要性排第一)
+Logstash:      负责日志的收集和分析、处理  (排第二)
+Kibana:        负责日志的可视化           (第三)
+
+ELK类似于:LNMP
+          web        db                  脚本语言(php,python)
+          kibana     Elasticsearch       Logstash(java)       
+问题1: 一个网站平时100M带宽流量,突然暴涨200M.故障排查?
+   答: 1.查看出口流量看是哪个集群----->2.查看是否被攻击,查看web单ip访问量---->3.查看访问次数是否明显增加--
+      -->4.CDN(内容分发网络)是否失效---->5.查看单个web的流量--->6.排查每一个链接流量(首页-->原因:首页有一个图片变大了,图片没压缩)
+
+ELK能做什么
+ELK组件在海量日志系统的运维中,可用于解决
+-分布式日志数据集中式查询和管理
+-系统监控,包含系统硬件和应用各个组件的监控
+-故障排查
+-安全信息和事件管理
+-报表功能
+
+备份3手准备:线上实时,离线,每天磁带
+
+
+非关系型数据库保存:key:value(一个文档一个内容)
+Document:像行
+        :库
+        :表
+        :列
+        :索引
+        :索引的拷贝
+安装ES集群
+
+vim /etc/hosts                                                      设置IP和主机对应
+192.168.1.51 es1
+192.168.1.52 es2
+192.168.1.53 es3
+192.168.1.54 es4
+192.168.1.55 es5
+
+
+vim /etc/yum.repos.d/local.repo                                      配置yum源
+
+yum -y install java-1.8.0-openjdk.x86_64                            java写的,解决依赖关系
+yum -y install elasticsearch
+vim /etc/elasticsearch/elasticsearch.yml
+17 cluster.name: myelk                                               配置集群名字
+23 node.name: es1                                                    当前主机名称
+54 network.host: 0.0.0.0                                             0.0.0.0（监听所有地址）
+68 discovery.zen.ping.unicast.hosts: ["es1", "es2", "es3"]           声明集群里的主机成员有谁，不需要全部写进去
+
+systemctl restart elasticsearch  systemctl enable elasticsearch      起服务并设置开机自启动
+
+ss -antup | grep 9200 9300                                           端口号9200,9300
+
+
+firefox http://192.168.1.55:9200/                                    测试
+firefox http://192.168.1.55:9200/_cluster/health?pretty              测试
+
+rpm -ql elasticsearch                                                在其中一台机器上部署插件,查看ES安装的插件路径
+cd /usr/share/elasticsearch/bin                                      进去查看内容
+./plugin  install 
+ftp://192.168.1.254/elk/elasticsearch-head-master.zip                安装head插件
+ftp://192.168.1.254/elk/elasticsearch-kopf-master.zip                安装kopf插件
+ftp://192.168.1.254/elk/bigdesk-master.zip                           安装bigdesk插件
+
+./plugin  list                                                       查看安装的插件
+
+firefox 192.168.1.55:9200/_plugin/head                               测试
+firefox 192.168.1.55:9200/_plugin/kopf                               测试
+firefox 192.168.1.55:9200/_plugin/bigdesk                            测试
+
+head:索引--->新建索引--->索引名称,分片(数量小于机器数量从0开始),副本(源数据黑框 副本浅)
+
+http请求由三部分组成:请求行,消息报头,请求正文
+http请求方法:GET POST HEAD
+
+curl常用参数介绍:
+-A 修改请求 agent  例子    curl -A  'windows IE 11.0' http://118.144.89.240/info.php                
+-X 设置请求方法     例子    curl -XPUT http://118.144.89.240/info.php                  修改请求方法
+-i 显示返回头信息    
+
+
+
+
+ 
+
+
+
+
