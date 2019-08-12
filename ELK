@@ -24,7 +24,9 @@ ELK组件在海量日志系统的运维中,可用于解决
 
 
 非关系型数据库保存:key:value(一个文档一个内容)
-Document:像行
+Node:     装有一个ES服务服务器的节点
+Cluster:  有多个Node组成的集群
+Document: 像行
         :库
         :表
         :列
@@ -74,17 +76,108 @@ firefox 192.168.1.55:9200/_plugin/bigdesk                            测试
 head:索引--->新建索引--->索引名称,分片(数量小于机器数量从0开始),副本(源数据黑框 副本浅)
 
 http请求由三部分组成:请求行,消息报头,请求正文
-http请求方法:GET POST HEAD
+http请求方法:
+-常用方法:GET POST HEAD
+-其他方法:OPTIONS PUT DELETE TRACE和CONNECT
+
+ES常用
+-PUT     ----增
+-DELETE  ----删
+-POST    ----改
+--GET    ----查
 
 curl常用参数介绍:
 -A 修改请求 agent  例子    curl -A  'windows IE 11.0' http://118.144.89.240/info.php                
--X 设置请求方法     例子    curl -XPUT http://118.144.89.240/info.php                  修改请求方法
+-X 设置请求方法     例子    curl -XPUT http://118.144.89.240/info.php                           修改请求方法
 -i 显示返回头信息    
 
+RESTful API调用
+-检查集群,节点,索引的健康度,状态和统计
+-管理集群,节点,索引的数据及元数据
+-对索引进行CRUD操作及查询操作
+-执行其他高级操作如分页,排序,过滤等
+
+POST或PUT数据使用json格式
+
+_cat API                                                                                     查询集群状态,节点信息
+curl http://192.168.1.51:9200/_cat/indices?v   查看索引信息                                   -v参数显示详细信息                  
+curl http://192.168.1.51:9200/_cat/indices?help                                             -help显示帮助信息
+curl http://192.168.1.51:9200/_cat                                                           查看_cat的所有用法
+
+例子
+
+创建一个索引,并设置分片数量与副本数量
+curl -XPUT http://es3:9200/tedu -d '
+{"settings":{
+    "index":{
+        "number_of_hsards": 5,
+        "number_of_replicas": 1
+  }}
+}'
+
+firefox 192.168.1.55:9200/_plugin/head                                                      测试
+
+PUT插入数据
+
+curl -XPUT '3ttp://192.168.1.55:9200/tedu/student/1' -d '{
+"职业":"学生",
+"名字":"杰瑞",
+"称号":"老鼠",
+"年代":"18世纪"
+}'
+
+
+curl -XPUT 'http://192.168.1.55:9200/tedu/student/2' -d '{
+"职业":"学生",
+"名字":"大白",
+"称号":"老司机",
+"年代":"24世纪"
+}'
+
+*************************************************************************************************************
+
+POST修改
+curl -XPOST 'http://192.168.1.55:9200/tedu/student/1/_update' -d {
+"doc":{
+  "年代": "唐代"
+  }
+}
 
 
 
- 
+查询
+curl -XGET http://192.168.1.55:9200/tedu/student/1
+
+删除
+curl -XDELETE 'http://192.168.1.55:9200/tedu/student/1'
+
+
+gunzip shakespeare.json.gz   解压
+
+
+
+curl -XPOST 'http://192.168.1.54:9200/accounts/_bulk' --data-binary @accounts.json   导入数据
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
