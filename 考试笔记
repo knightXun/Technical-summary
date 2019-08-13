@@ -1,0 +1,100 @@
+一、安全策略配置 ——
+1. 配置SELinux
+vim  /etc/selinux/config
+SELINUX=enforcing 
+SELinux的类型 
+enforcing      强制
+permissive     宽松
+disabled       禁用
+
+setenforce  1  临时开启 SELinux
+getenforce     查看结果
+
+2.配置 SSH 访问
+vim /etc/ssh/sshd_config
+DenyUsers *@*.xxxx.org  *@*192.168.0.*      登录方式 ssh  root@192.168.1.10  或则 root@主机名.xxxx.org
+
+3.别名设置
+vim /etc/bashrc
+
+alias   别名='自定义命令'
+
+4.配置防火墙端口转发
+systemctl restart firewalld                起服务
+systemctl enable firewalld                 设置开机自启
+ 
+ firewall-cmd --set-default-zone=trusted                            将默认区域设置为信任
+ firewall-cmd --permanent --add-source=172.34.0.0/24 --zone=block   阻止未授权网络 XXX.org 的网段         
+ fireword-cmd --permanent --zone=trusted --add-forward-port=port=源端口号:proto=tcp:toport=目标端口  实现端口2000==>80端口转发
+ firewall-cmd --reload                                               重新加载网段
+ 
+ 防火墙预设的区域：
+block：           阻止所有数据包
+drop：            丢弃所有数据包
+public：          公共区域，允许SSH等极个别服务，默认区域
+trusted：         信任区域，允许任何访问
+
+--permanent       永久配置
+系统服务：iptables --》firewalld
+管理工具：iptables --》firewall-cmd、firewall-config 
+ 
+ 
+ 5. 配置链路聚合
+ 
+ nmcli connection add con-name team0 type team ifname team0 config '{"runner": {"name": "activebackup"}}' 建立主连接
+ nmcli connection add con-name team0-p1 type team-slave ifname eth1 master team0                          指定成员网卡1
+ nmcli connection add con-name team0-p2 type team-slave ifname eth2 master team0                          指定网卡2
+ nmcli connection modify team0 ipv4.method manual ipv4.addresses '192.168.3.25/24' connection.autoconnect yes 为聚合链接配置IP地址
+ nmcli con modify team0 connection.autoconnect yes                                                        设置自动连接
+ nmcli con modify team0-p1 connection.autoconnect yes
+ nmcli con modify team0-p2 connection.autoconnect yes
+ nmcli connection up team0                                                                                 激活聚合链路
+ teamdctl team0 state                                                                                      检查状态
+ 
+ nmcli connection delete 网卡名称                                                                            删除网卡
+ 聚合连接的类型 ——
+ activebackup:  热备份      
+ roundrobin:    轮询负载均衡 
+ 
+ man  teamd.conf ==》/"runner     获得运行模式配置
+ man  nmcli-examples  ==》 /Team1 获得命令操作帮助
+ 
+ 6. 配置 IPv6 地址
+ nmcli connection show                                                                                     获知 eth0 的连接名称 
+ nmcli connection modify "连接名" ipv6.method manual ipv6.addresses "2003:ac18::305/64" connection.autoconnect yes 
+ nmcli connection up "连接名" 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
