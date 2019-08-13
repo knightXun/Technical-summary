@@ -224,7 +224,7 @@ output{
 }
  
  /opt/logstash/bin/logstash -f /etc/logstash/logstash.conf  启动并测试
-
+ 
 /opt/logstash/bin/logstash-plugin  list                     查看插件
 logstash-input-stdin                                        标准输入插件
 logstash-output-stdout                                      标准输出插件
@@ -239,6 +239,9 @@ codec{}     编码
 --stdout   1:显示器        标准输出
 --stderr   2:             
 
+插件
+input file 
+filter grok
 
 https://www.elastic.co/guide/en/logstash/current/index.html
 
@@ -306,7 +309,35 @@ output{
 
 
 
+input{
+  file {
+    path => ["/tmp/a.log"]                                                   建存放信息的文件,数组,必写项
+    sincedb_path => "/var/lib/logstash/since.db"
+    start_position => "beginning"
+    type => "testlog"
+  }
+  beats {
+    port => 5044
+  }
+}
 
+filter{
+  if [type] == "apache_log" {
+  grok {
+    match => { "message" => "%{COMBINEDAPACHELOG}" }
+  }}
+}
+
+output{
+  #stdout{ codec => "rubydebug" }
+  if [type] == "apache_log" {
+  elasticsearch {
+    hosts => ["es1:9200", "es3:9200", "es4:9200"]
+    index => "weblog"
+    flush_size => 2000
+    idle_flush_time => 10
+  }}
+}
 
 
 
