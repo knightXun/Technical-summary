@@ -153,6 +153,168 @@ gunzip shakespeare.json.gz                                                      
 curl -XPOST 'http://192.168.1.54:9200/accounts/_bulk' --data-binary @accounts.json   导入数据
 
 
+***********************************************************************************************
+logstach工作结构:
+{数据源} ==>
+       input{ } ==>
+               filter { } ==>
+                          output{ } ==>
+                                    {ES}
+
+安装Kibana
+yum -y install kibana                                        装包
+rpm -qc kibana                                               查看配置文件
+vim /opt/kibana/config/kibana.yml
+
+
+2 server.port: 5601                                          若把端口改为80，可以成功启动kibana，但ss时没有端口，没有监听80端口，
+                                                             服务里面写死了，不能用80端口，只能是5601这个端口
+5 server.host: "0.0.0.0"                                     服务器监听地址
+15 elasticsearch.url: http://192.168.1.51:9200               声明地址，从哪里查，集群里面随便选一个,主机名和IP地址都可以
+23 kibana.index: ".kibana"                                   kibana自己创建的索引
+26 kibana.defaultAppId: "discover"                           打开kibana页面时，默认打开的页面discover
+53 elasticsearch.pingTimeout: 1500                           ping检测超时时间
+57 elasticsearch.requestTimeout: 30000                       请求超时
+64 elasticsearch.startupTimeout: 5000                        启动超时
+
+
+systemctl restart kibana 
+systemctl enable  kibana
+
+ss -antup | grep 5601                                       查看监听端口
+firefox 192.168.1.56:5601                                   浏览器访问kibana
+firefox http://192.168.1.55:9200/_plugin/head               用head插件访问会有.kibana的索引信息
+
+
+金步国翻译英文手册
+
+
+kibana:索引名--->时间搓---->创建
+
+
+
+安装logstash                配置主机名，ip和yum源，配置/etc/hosts（请把es1-es5、kibana主机配置和logstash一样的/etc/hosts）                              
+vim /etc/hosts
+192.168.1.51 es1
+192.168.1.52 es2
+192.168.1.53 es3
+192.168.1.54 es4
+192.168.1.55 es5
+192.168.1.56 kibana
+192.168.1.57 logstash
+
+yum -y install java-1.8.0-openjdk                安装java-1.8.0-openjdk和logstash
+yum -y install logstash
+
+touch /etc/logstash/logstash.conf                创建自定义配置文件
+
+
+例子:
+ vim /etc/logstash/logstash.conf
+ 
+input{
+    stdin{
+   }
+}
+filter{
+}
+output{
+    stdout{
+   }
+}
+ 
+ /opt/logstash/bin/logstash -f /etc/logstash/logstash.conf  启动并测试
+
+/opt/logstash/bin/logstash-plugin  list                     查看插件
+logstash-input-stdin                                        标准输入插件
+logstash-output-stdout                                      标准输出插件
+
+logstash是一个数据采集,加工处理以及输出的工具
+例子:
+input{}     写入 
+filter{}    处理
+output{}    输出
+codec{}     编码
+--stdin    0:键盘.鼠标     标准输入
+--stdout   1:显示器        标准输出
+--stderr   2:             
+
+
+https://www.elastic.co/guide/en/logstash/current/index.html
+
+
+输入json 输出:rubydebug(输出的信息易于人们阅读)
+
+input{
+  stdin{ codec => "json" }
+}
+filter{}
+output{
+  stdout{ codec => "rubydebug" }
+}
+
+输出的信息如下:
+ ./logstash -f /etc/logstash/logstash.conf        启动并验证
+Settings: Default pipeline workers: 2
+Pipeline main started
+{"a":1,"c":3,"b":2}
+{
+             "a" => 1,
+             "c" => 3,
+             "b" => 2,
+      "@version" => "1",
+    "@timestamp" => "2019-08-13T06:48:33.752Z",
+          "host" => "logstash"
+}
+^CSIGINT received. Shutting down the agent. {:level=>:warn}
+stopping pipeline {:id=>"main"}
+
+https://www.elastic.co/guide/en/logstash/current/index.html
+查看官方手册:
+input {
+  file {
+    id => "my_plugin_id"   
+  }
+}
+
+
+https://www.elastic.co/guide/en/logstash/current/plugins-inputs-file.html#plugins-inputs-file-options
+
+找第三个是yes的
+
+Example:
+
+  path => [ "/var/log/messages", "/var/log/*.log" ]
+  uris => [ "http://elastic.co", "http://example.net" ]
+
+rm -rf /root/.sincedb_e9a1772295a869da80134b5c4e75816e                    存放记录日志的信息,为了后期管理一般删除掉
+rm -rf /var/lib/logstash/sincedb-access
+input {
+  file {
+    path => ["/tmp/a.log", "/var/tmp/b.log"]                              创建存放信息的文件,数组,必写项
+    sincedb_path => "/var/lib/logstash/sincedb-access"                    记录读取文件的位置,这个文件路径会自动生成
+    start_position => "beginning"                                         配置第一次读取文件从什么地方开始
+    type => "testlog"                                                     
+  }
+}
+filter{}
+output{
+  stdout{ codec => "rubydebug" } 
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
