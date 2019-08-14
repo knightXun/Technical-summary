@@ -281,89 +281,92 @@ MaxScale> exit
    
     
    
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-                    
-                    
-                    
-                    
-                    
-                    
+SQL多表连接查询: 
+
+表A：student
+ID  Name
+1   张三
+2   李四
+3   王五
+
+表B：course   
+ID  Name
+1   足球
+2   音乐
+4   美术  
+
+（此时这样建表只是为了演示连接SQL语句，当然实际开发中我们不会这样建表，实际开发中这两个表会有自己不同的主键。）
+   
+   一:外连接 
+
+ 外连接可分为:左连接、右连接、完全外连接.
+ 格式:SQL语句:select * from A表 left join B表 on A表.字段=B表.字段
+ 
+ 1.左连接left join 或left outer join                     只显示A表的内容,B表多余的内容不显示
+ 2.右连接  right join 或 right outer join                只显示B表的内容,A表多余的内容不显示
+ 3、完全外连接  full join 或 full outer join              完全外连接包含full join左右两表中所有的行
+ 
+ 例子:
+ 新建2张A表和B表  
+表A：student
+ID  Name
+1   张三
+2   李四
+3   王五
+
+表B：course   
+ID  Name
+1   足球
+2   音乐
+4   美术  
+   
+SQL语句：select * from student left join course on student.ID=course.ID   左连接
+ID  Name  ID   Name
+1   张三   1    足球
+2   李四   2    音乐
+3   王五   NULL NULL
+SQL语句：select * from student right join course on student.ID=course.ID  右连接
+ID   Name  ID   Name
+1    张三   1    足球
+2    李四   2    音乐
+NULL NULL  4    美术 
+SQL语句：select * from student full join course on student.ID=course.ID   外连接
+ID   Name  ID    Name
+1    张三   1     足球
+2    李四   2     音乐
+3    王二   NULL  NULL
+NULL NULL  4      美术 
+  
+二、内连接  join 或 inner join
+SQL语句：select * from student inner join course on student.ID=course.ID 
+//inner join 是比较运算符，只返回符合条件的行。
+此时相当于：select * from student,course where student.ID=course.ID  
+  ID   Name   ID   Name
+  1    张三    1    足球
+  2    李四    2    音乐
+   
+三、交叉连接 cross join
+
+1.概念：没有 WHERE 子句的交叉联接将产生连接所涉及的表的笛卡尔积。第一个表的行数乘以第二个表的行数等于笛卡尔积结果集的大小。
+
+SQL语句：select * from student cross join course  
+ID  Name  ID   Name
+1   张三   1    足球
+2   李四   1    足球
+3   王五   1    足球
+1   张三   2    音乐
+2   李四   2    音乐
+3   王五   2    音乐
+1   张三   4    美术
+2   李四   4    美术
+3   王五   4    美术
+如果我们在此时给这条SQL加上WHERE子句的时候比如SQL:select * from student cross join course where student.ID=course.ID
+
+此时将返回符合条件的结果集，结果和inner join所示执行结果一样。  
+   
+   
+   
+   
+   
+   
+                   
