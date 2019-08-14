@@ -189,6 +189,8 @@ firefox http://192.168.1.55:9200/_plugin/head               用head插件访问�
 金步国翻译英文手册,里面有很多中文翻译手册
 
 
+
+
 kibana:索引名--->时间搓---->创建
 
 /opt/logstash/bin/logstash-plugin  list          查看插件
@@ -262,6 +264,8 @@ Pipeline main started
 }
 
 4）file模块插件
+https://www.elastic.co/guide/en/logstash/current/plugins-inputs-file.html#plugins-inputs-file-options 官方链接
+
 [root@logstash ~]# vim /etc/logstash/logstash.conf
 input{
   file {
@@ -412,12 +416,12 @@ ZZ           "host" => "logstash",
 [root@se5 ~]#  yum -y install filebeat
 [root@se5 ~]#  vim/etc/filebeat/filebeat.yml  
 paths:
-    - /var/log/httpd/access_log   //日志的路径，短横线加空格代表yml格式
-document_type: apachelog    //文档类型
-elasticsearch:        //加上注释
-hosts: ["localhost:9200"]                //加上注释
-logstash:                    //去掉注释
-hosts: ["192.168.1.57:5044"]     //去掉注释,logstash那台主机的ip
+    - /var/log/httpd/access_log   //15日志的路径，短横线加空格代表yml格式
+document_type: apachelog    //72文档类型
+elasticsearch:        //183加上注释
+hosts: ["localhost:9200"]                //188上注释
+logstash:                    //278去掉注释
+hosts: ["192.168.1.57:5044"]     //280去掉注释,logstash那台主机的ip
 [root@se5 ~]# systemctl start filebeat
 [root@logstash ~]#  vim /etc/logstash/logstash.conf
 input{
@@ -454,6 +458,53 @@ output{
 [root@logstash ~]#  netstat -antup | grep 5044
 tcp6       0      0 :::5044                 :::*                    LISTEN      23776/java
 [root@se5 ~]#  firefox 192.168.1.55   //ip为安装filebeat的那台机器
+
+打开另一终端查看5044是否成功启动
+[root@logstash ~]#  netstat -antup | grep 5044
+tcp6       0      0 :::5044                 :::*                    LISTEN      23776/java
+[root@se5 ~]#  firefox 192.168.1.55   //ip为安装filebeat的那台机器
+回到原来的终端，有数据
+2）修改logstash.conf文件
+[root@logstash logstash]# vim logstash.conf
+...
+output{
+      stdout{ codec => "rubydebug" }
+      if [type] == "apachelog"{
+      elasticsearch {
+          hosts => ["192.168.1.51:9200", "192.168.1.52:9200"]
+          index => "apachelog"
+          flush_size => 2000
+          idle_flush_time => 10
+      }}
+}
+
+浏览器访问Elasticsearch，有apachelog，如图-20所示：
+[student@room9pc01 ~]$ firefox http://192.168.1.55:9200/_plugin/head
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
