@@ -55,36 +55,111 @@ mv hadoop-2.7.7 /usr/local/hadoop                安装hadoop
 
 rpm -ql java-1.8.0-openjdk                       查看路径
 cd ./etc/hadoop/
-vim hadoop-env.sh                                修改java家目录文件
-25 export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.161-2.b14.el7.x86_64/jre         文件格式
-33 export HADOOP_CONF_DIR="/usr/local/hadoop/etc/hadoop"                                   文件格式
+vim hadoop-env.sh                                修改java家目录文件,环境变量文件
+25 export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.161-2.b14.el7.x86_64/jre         安装路径
+33 export HADOOP_CONF_DIR="/usr/local/hadoop/etc/hadoop"                                   安装路径
 ./usr/local/hadoop/bin/hadoop                                                              检测java命令是否可用
 
 mkdir /usr/local/hadoop/文件夹A                                                             新建文件夹
 cp *.txt /usr/local/hadoop/文件夹A                                                          放些数据进去测试
-./bin/hadoop jar  share/hadoop/mapreduce/hadoop-mapreduce-examples-2.7.7.jar  wordcount 文件夹A 文件夹B 
-//wordcount为参数 统计文件夹A，存到文件夹B,个文件不能存在，要是存在会报错，是为了防止数据覆盖）
-cat   output/part-r-00000                                                                  查看
+./bin/hadoop jar  /usr/local/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.7.7.jar  wordcount 文件夹A 文件夹B 
+//jar,运行java文件 wordcount为参数 统计文件夹A，存到文件夹B,这个文件夹不能存在，要是存在会报错，是为了防止数据覆盖）
+cat   文件夹B/part-r-00000                                                                  查看大数据
+part-r-00000  _SUCCESS                                                                     这是成功输出
+
+
+要去看官方查手册
+
+安装配置Hadoop
+三台虚拟机，安装Hadoop
+使所有节点能够ping通，配置SSH信任关系
+节点验证
+
+步骤一：环境准备
+
+1）三台机器配置主机名为node1、node2、node3，配置ip地址，yum源（系统源）
+2）编辑/etc/hosts（四台主机同样操作，以nn01为例）
+vim /etc/hosts
+192.168.1.60  nn01
+192.168.1.61  node1
+192.168.1.62  node2
+192.168.1.63  node3
+
+yum -y install java-1.8.0-openjdk-devel                        安装java环境，在nn01,node1，node2，node3(所有机器都要安装)
+vim /etc/ssh/ssh_confing
+60 StrictHostKeyChecking no       这里要改为no,35行有ask有模板     第一次登陆不需要输入yes
+ssh-keygen -f /root/.ssh/id_rsa -N ''                           布置SSH信任关系
+for i in 61 62 63 64 ; do  ssh-copy-id  192.168.1.$i; done      部署公钥给nn01，node1，node2，node3,做4遍
+ssh node1 ssh node2                                             测试信任关系
 
 
 
 
+Hadoop官网文档: hadop.apache.org/docs
+http://hadoop.apache.org/docs/r2.7.7/hadoop-project-dist/hadoop-common/core-default.xml
+
+步骤二：配置hadoop
+
+<configuration>                                                   固定格式
+<property> 
+<name></name>
+<value></value>
+</property>
+</configuration>
+
+例子:
+vim /usr/local/hadoop/etc/hadoop/slaves                           1)修改slaves文件
+node1
+node2
+node3    
+
+vim /usr/local/hadoop/etc/hadoop/core-site.xml                    2)配置hdfs-site文件     
+<property>                                                             
+<name>dfs.namenode.http-address</name>
+<value>nn01:50070</value>
+</property>
+
+<property>
+<name>dfs.namenode.secondary.http-address</name>
+<value>nn01:50090</value>
+</property>
+
+<property>
+<name>dfs.replication</name>
+<value>2</value>
+</property>
 
 
+vim /usr/local/hadoop/etc/hadoop/core-site.xml                  3)hadoop的核心配置文件core-site
+<configuration>                                                                                                                      
+<property>                                                                                                    
+<name>dfs.defaultFS</name>                                       name字段严格区分大小写
+<value>hdfs://nn01:9000</value>                                  配置文件系统,可以自己修改
+</property>
+
+<property>                                                       
+<name>hadoop.tmp.dir</name>
+<value>/var/hadoop</value>                                       核心文件,存放所有数据的文件
+</property>
+</configuration>
 
 
+# for i in node{1..3};do                                         4）同步配置到node1，node2，node3                                      
+>rsync -aXSH --delete /usr/local/hadoop ${i}:/usr/local/ &
+>done
 
+步骤三：格式化
 
+ mkdir /var/hadoop                                                 创建hadoop的数据根目
+./bin/hdfs namenode -format                                        进行格式化操作     
+./sbin/satrt-dfs.sh                                                启动集群                                      
+# ./bin/hdfs dfsadmin -report                                      查看集群是否组建成功
 
-
-
-
-
-
-
-
-
-
+/usr/local/hadoop/logs/                                            日志文件
+jps
+29072 Jps
+28775 SecondaryNameNode
+28584 NameNode
 
 
 
