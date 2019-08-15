@@ -113,6 +113,8 @@ node1
 node2
 node3    
 
+
+官方模板:http://hadoop.apache.org/docs/r2.7.7/hadoop-project-dist/hadoop-hdfs/hdfs-default.xml
 vim /usr/local/hadoop/etc/hadoop/core-site.xml                    2)配置hdfs-site文件     
 <property>                                                             
 <name>dfs.namenode.http-address</name>
@@ -130,6 +132,9 @@ vim /usr/local/hadoop/etc/hadoop/core-site.xml                    2)配置hdfs-s
 </property>
 
 
+
+
+官方模板:http://hadoop.apache.org/docs/r2.7.7/hadoop-project-dist/hadoop-common/core-default.xml
 vim /usr/local/hadoop/etc/hadoop/core-site.xml                  3)hadoop的核心配置文件core-site
 <configuration>                                                                                                                      
 <property>                                                                                                    
