@@ -1,0 +1,95 @@
+大数据
+特性:
+容量（Volume）：数据的大小决定所考虑的数据的价值和潜在的信息； 
+种类（Variety）：数据类型的多样性； 
+速度（Velocity）：指获得数据的速度；  
+可变性（Variability）：妨碍了处理和有效地管理数据的过程;
+真实性（Veracity）：数据的质量;
+复杂性（Complexity）：数据量巨大，来源多渠道;
+价值（value）：合理运用大数据，以低成本创造高价值.
+
+
+Hadoop
+Hadoop是一种分析和处理海量数据的软件平台;是一款开源软件,使用JAVA开发;可以提供一个分布式基础架构
+特点:高可靠性、高扩展性、高效性、高容错性、低成本
+Hadoop常用组件
+HDFS:Hadoop分布式文件系统(核心组件)
+MapReduce:分布式计算框架(核心组件)   
+Yarn:集群资源管理系统(核心组件)
+
+************************************************************************************************************
+存储节点
+HDFS角色及概念:Hadoop体系中数据存储管理的基础,是一个高度容错的系统,用于在低成本的通用硬件上运行
+角色和概念
+NameNode:Master管理节点,可以理解为----->宿管员,领导
+Secondary NameNode:定期合并[fsimage和fsedits](补丁,文件变更日志),推送给NameNode,紧急情况下,可以辅助恢复NameNode.
+但前者并非后者的热备,可以理解为----->秘书
+DateNode:数据存储节点,存储实际的数据,汇报存储信息给NameNode---->员工
+Block:每块128M,每块可以多个副本
+client结构:
+切块 --->    访问 --->  存档   ---->                 交互
+client ----> HDFS----->NameNode(获取文件位置信息)----->DataNode(读取和写入数据)
+
+****************************************************************************************************************
+数据节点
+MapReduce 
+
+
+
+****************************************************************************************************************
+数据节点
+Yarn
+
+
+
+
+******************************************************************************************************************
+
+
+安装Hadoop
+
+yum -y install java-1.8.0-openjdk-devel          安装java环境
+
+tar -xf hadoop-2.7.7.tar.gz 
+mv hadoop-2.7.7 /usr/local/hadoop                安装hadoop
+
+rpm -ql java-1.8.0-openjdk                       查看路径
+cd ./etc/hadoop/
+vim hadoop-env.sh                                修改java家目录文件
+25 export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.161-2.b14.el7.x86_64/jre         文件格式
+33 export HADOOP_CONF_DIR="/usr/local/hadoop/etc/hadoop"                                   文件格式
+./usr/local/hadoop/bin/hadoop                                                              检测java命令是否可用
+
+mkdir /usr/local/hadoop/文件夹A                                                             新建文件夹
+cp *.txt /usr/local/hadoop/文件夹A                                                          放些数据进去测试
+./bin/hadoop jar  share/hadoop/mapreduce/hadoop-mapreduce-examples-2.7.7.jar  wordcount 文件夹A 文件夹B 
+//wordcount为参数 统计文件夹A，存到文件夹B,个文件不能存在，要是存在会报错，是为了防止数据覆盖）
+cat   output/part-r-00000                                                                  查看
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
