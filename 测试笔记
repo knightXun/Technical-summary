@@ -65,24 +65,58 @@ trusted：         信任区域，允许任何访问
  nmcli connection up "连接名" 
  
  
+ 7.邮件
+软件包：postfix
+系统服务：postfix
+配置文件：/etc/postfix/main.cf
+
+314行:relayhost = [smtp0.example.com]                     后端邮件服务器
+113行inet_interfaces = loopback-only                      仅本机
+98行myorigin = desktop0.example.com                       发件来源域
+264行mynetworks = 127.0.0.0/8, [::1]/128                  信任网络
+164行mydestination =                                      此的值设为空
+137行local_transport = error:local delivery disabled      自定义报错
+
+echo 'I am king.' | mail -s 'Test1' student 在 server0    发测试邮件
  
+ 8.samba共享
  
+ 用途：为客户机提供共享文件夹、共享打印机资源
+软件包（S）：samba
+软件包（C）：samba-client、cifs-utils
+协议和端口：
+    CIFS，Common Internet File System，通用网际文件系统 —— TCP 445
+    SMB，Server Message Block，服务消息块 —— TCP 139
+系统服务：smb
+用途：提供共享文件夹
+协议：SMB（TCP 139）、CIFS（TCP 445）
+vim  /etc/samba/smb.conf
+ workgroup  =  工作组名
  
+ [共享名] 
+ 配置语句 =  值
+path  =  文件夹路径 
+write list = 用户1  用户2 
+hosts  allow  =  客户机1  网段1  .. .. 172.25.0.0/24
+
+pdbedit  -a  用户名                        添加用户
+
+ SELinux预设策略的开关控制（布尔值）：
+getsebool  -a  | grep  samba_ex           查看Samba相关布尔值
+setsebool  -P  samba_export_all_rw=on     修改Samba布尔值
+
+ smbclient  -L  服务器地址 	【密码为空（直接回车）】   测试samba共享
  
+ 9.配置多用户Samba挂载
+ # vim  /etc/fstab
+.. ..
+被挂载的设备               挂载点         文件系统类型   挂载参数       0      0
+//172.25.0.11/devops    /mnt/dev        cifs        username=kenji,password=atenorth,multiuser,sec=ntlmssp,_netdev 0 0 
  
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
+# su - chihiro                       测试
+# cifscreds  add  server0            添加用户
+Password: 共享账号chihiro的密码        
+# touch  /mnt/dev/a.txt              测试可以写入数据
  
  
  
