@@ -77,6 +77,22 @@ part-r-00000  _SUCCESS                                                          
 
 步骤一：环境准备
 
+完全分布式:
+安装Hadoop
+
+yum -y install java-1.8.0-openjdk-devel                         安装java环境
+tar -xf hadoop-2.7.7.tar.gz 
+mv hadoop-2.7.7 /usr/local/hadoop                               安装hadoop
+rpm -ql java-1.8.0-openjdk                                      查看路径
+cd ./etc/hadoop/
+
+vim hadoop-env.sh                                               修改java家目录文件,环境变量文件
+25 export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.161-2.b14.el7.x86_64/jre         安装路径
+33 export HADOOP_CONF_DIR="/usr/local/hadoop/etc/hadoop"                 
+
+
+
+
 1）三台机器配置主机名为node1、node2、node3，配置ip地址，yum源（系统源）
 2）编辑/etc/hosts（四台主机同样操作，以nn01为例）
 vim /etc/hosts
