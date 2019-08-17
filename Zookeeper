@@ -1,0 +1,183 @@
+Zookeeper是一种开源的分布式应用程序协调服务;
+         是用来保证数据在集群间的事务一致性./usr/local/zookeeper/bin/zkServer.sh start
+
+应用场景:集群分布式锁
+        集群统一命名服务
+        分布式协调服务
+Leader:能读能写,可投票,一主
+Follower:只读,多从
+Observer:只读,不能投票,提升读性能的可伸缩性,提供了广域网能力
+选举Leader原则:集群超半数,n/2+1
+Leader和Follower死亡机器数量不能超一半,超了集群挂掉,Observer不计算在投票投票设备数量里面
+ 
+
+步骤一：安装Zookeeper
+1）编辑/etc/hosts ,所有集群主机可以相互 ping 通（在nn01上面配置，同步到node1，node2，node3）
+[root@nn01 hadoop]# vim /etc/hosts
+192.168.1.60  nn01
+192.168.1.61  node1
+192.168.1.62  node2
+192.168.1.63  node3
+192.168.1.66  node4
+[root@nn01 hadoop]# for i in {62..64}  \
+do    \
+scp /etc/hosts 192.168.1.$i:/etc/    \
+done        //同步配置
+hosts       100%  253   639.2KB/s   00:00    
+hosts       100%  253   497.7KB/s   00:00    
+hosts       100%  253   662.2KB/s   00:00    
+
+2）安装 java-1.8.0-openjdk-devel,由于之前的hadoop上面已经安装过，这里不再安装，若是新机器要安装
+3）zookeeper 解压拷贝到 /usr/local/zookeeper
+[root@nn01 ~]# tar -xf zookeeper-3.4.13.tar.gz 
+[root@nn01 ~]# mv zookeeper-3.4.13 /usr/local/zookeeper
+4）配置文件改名，并在最后添加配置
+[root@nn01 ~]# cd /usr/local/zookeeper/conf/
+[root@nn01 conf]# ls
+configuration.xsl  log4j.properties  zoo_sample.cfg
+[root@nn01 conf]# mv zoo_sample.cfg  zoo.cfg
+[root@nn01 conf]# chown root.root zoo.cfg
+[root@nn01 conf]# vim zoo.cfg
+server.1=node1:2888:3888
+server.2=node2:2888:3888
+server.3=node3:2888:3888
+server.4=nn01:2888:3888:observer
+5）拷贝 /usr/local/zookeeper 到其他集群主机
+[root@nn01 conf]# for i in {62..64}; do rsync -aSH --delete /usr/local/zookeeper/ 192.168.1.$i:/usr/local/zookeeper  -e 'ssh' & done
+[4] 4956
+[5] 4957
+[6] 4958
+
+6）创建 mkdir /tmp/zookeeper，每一台都要
+[root@nn01 conf]# mkdir /tmp/zookeeper
+[root@nn01 conf]# ssh node1 mkdir /tmp/zookeeper
+[root@nn01 conf]# ssh node2 mkdir /tmp/zookeeper
+[root@nn01 conf]# ssh node3 mkdir /tmp/zookeeper
+
+
+7）创建 myid 文件，id 必须与配置文件里主机名对应的 server.(id) 一致
+[root@nn01 conf]# echo 4 >/tmp/zookeeper/myid
+[root@nn01 conf]# ssh node1 'echo 1 >/tmp/zookeeper/myid'
+[root@nn01 conf]# ssh node2 'echo 2 >/tmp/zookeeper/myid'
+[root@nn01 conf]# ssh node3 'echo 3 >/tmp/zookeeper/myid'
+
+
+8）启动服务，单启动一台无法查看状态，需要启动全部集群以后才能查看状态，每一台上面都要手工启动（以nn01为例子）
+[root@nn01 conf]# /usr/local/zookeeper/bin/zkServer.sh start
+ZooKeeper JMX enabled by default
+Using config: /usr/local/zookeeper/bin/../conf/zoo.cfg
+Starting zookeeper ... STARTED
+
+注意：刚启动zookeeper查看状态的时候报错，启动的数量要保证半数以上，这时再去看就成功了
+
+socat - TCP:node1:2181
+9）查看状态
+[root@nn01 conf]# /usr/local/zookeeper/bin/zkServer.sh status
+ZooKeeper JMX enabled by default
+Using config: /usr/local/zookeeper/bin/../conf/zoo.cfg
+Mode: observe
+[root@nn01 conf]# /usr/local/zookeeper/bin/zkServer.sh stop  
+//关闭之后查看状态其他服务器的角色
+ZooKeeper JMX enabled by default
+Using config: /usr/local/zookeeper/bin/../conf/zoo.cfg
+Stopping zookeeper ... STOPPED
+[root@nn01 conf]# yum -y install telnet
+[root@nn01 conf]# telnet node3 2181 
+Trying 192.168.1.24...
+Connected to node3.
+Escape character is '^]'.
+ruok        //发送
+imokConnection closed by foreign host.        //imok回应的结果
+
+
+10）利用 api 查看状态（nn01上面操作）
+[root@nn01 conf]# /usr/local/zookeeper/bin/zkServer.sh start
+[root@nn01 conf]# vim api.sh
+#!/bin/bash
+function getstatus(){
+    exec 9<>/dev/tcp/$1/2181 2>/dev/null
+    echo stat >&9
+    MODE=$(cat <&9 |grep -Po "(?<=Mode:).*")
+    exec 9<&-
+    echo ${MODE:-NULL}
+}
+for i in node{1..3} nn01;do
+    echo -ne "${i}\t"
+    getstatus ${i}
+done
+[root@nn01 conf]# chmod 755 api.sh
+[root@nn01 conf]# ./api.sh  nn01 node{1..3}
+node1    follower
+node2    leader
+node3    follower 
+nn01    observer
+
+
+*****************************************************************************************************
+
+
+Kafka
+
+Kafka是由LinkedIn开发的一个分布式的消息系统,使用Scala编写;是一种消息中间件
+优点:解耦、冗余;提高扩展性;缓冲
+
+
+角色
+producer:生产者,发布消息
+consumer:消费者,读取处理消息
+topic:消息的类别
+Parition:每个
+
+Kafka通过Zookeeper管理集群配置,选举Leader
+
+
+步骤一：搭建Kafka集群
+
+1）解压 kafka 压缩包                                       Kafka在node1，node2，node3上面操作即可                    
+                                                         [root@node1 hadoop]# tar -xf kafka_2.12-2.1.0.tgz
+
+2）把 kafka 拷贝到 /usr/local/kafka 下面                   [root@node1 ~]# mv kafka_2.12-2.1.0 /usr/local/kafka
+
+3）修改配置文件 /usr/local/kafka/config/server.properties  [root@node1 ~]# cd /usr/local/kafka/config
+                                                          [root@node1 config]# vim server.properties
+                                                          broker.id=22
+                                                          zookeeper.connect=node1:2181,node2:2181,node3:2181
+
+4）拷贝 kafka 到其他主机，并修改 broker.id ,不能重复      [root@node1 config]# for i in 63 64; do rsync -aSH --delete /usr/local/kafka 192.168.1.$i:/usr/local/; done
+                                                      [1] 27072
+                                                      [2] 27073
+                                                      [root@node2 ~]# vim /usr/local/kafka/config/server.properties        
+                                                      //node2主机修改
+                                                      broker.id=23
+                                                      [root@node3 ~]# vim /usr/local/kafka/config/server.properties        
+                                                      //node3主机修改
+                                                      broker.id=24
+
+5）启动 kafka 集群（node1，node2，node3启动）[root@node1 local]# /usr/local/kafka/bin/kafka-server-start.sh -daemon /usr/local/kafka/config/server.properties 
+                                          [root@node1 local]# jps        //出现kafka
+                                                26483 DataNode
+                                                27859 Jps
+                                                27833 Kafka
+                                                26895 QuorumPeerMain
+
+
+6）验证配置，创建一个 topic   [root@node1 local]# /usr/local/kafka/bin/kafka-topics.sh --create --partitions 1  \
+                                               --replication-factor 1 --zookeeper node1:2181 --topic aa    
+                                               Created topic "aa"
+
+7) 模拟生产者，发布消息          [root@node2 ~]# /usr/local/kafka/bin/kafka-console-producer.sh \
+                                              --broker-list node2:9092 --topic aa                写一个数据
+                                              ccc
+                                              ddd
+
+9）模拟消费者，接收消息          [root@node3 ~]# /usr/local/kafka/bin/kafka-console-consumer.sh \ 
+                                             --bootstrap-server node2:9092 --topic aa           这边会直接同步
+                                             ccc
+                                             ddd
+
+
+
+
+
+
+
