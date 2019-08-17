@@ -178,6 +178,242 @@ Kafka通过Zookeeper管理集群配置,选举Leader
 
 
 
+***************************************************************************************************************
+
+
+
+Hadoop高可用
+
+步骤一：hadoop的高可用
+
+1）停止所有服务（由于 kafka的实验做完之后就已经停止，这里不在重复）          [root@nn01 ~]# cd /usr/local/hadoop/
+                                                                   [root@nn01 hadoop]# ./sbin/stop-all.sh  //停止所有服务 
+
+2）启动zookeeper（需要一台一台的启动）这里以nn01为例子                      [root@nn01 hadoop]# /usr/local/zookeeper/bin/zkServer.sh start
+                                                                     [root@nn01 hadoop]# sh /usr/local/zookeeper/conf/api.sh //利用之前写好的脚本查看
+                                                                       node1    follower
+                                                                       node2    leader
+                                                                       node3    follower
+                                                                       nn01    observer
+
+3）新加一台机器nn02，这里之前有一台node4，可以用这个作为nn02                  [root@node4 ~]# echo nn02 > /etc/hostname 
+                                                                       [root@node4 ~]# hostname nn02
+
+
+4）修改vim /etc/hosts                                                   [root@nn01 hadoop]# vim /etc/hosts
+                                                                        192.168.1.60  nn01
+                                                                        192.168.1.66  nn02
+                                                                        192.168.1.61  node1
+                                                                        192.168.1.62  node2
+                                                                        192.168.1.63  node3
+
+5）同步到nn02，node1，node2，node3
+
+[root@nn01 hadoop]# for i in {61..63} 66; do rsync -aSH --delete /etc/hosts 192.168.1.$i:/etc/hosts  -e 'ssh' & done
+[1] 14355
+[2] 14356
+[3] 14357
+[4] 14358
+
+6）配置SSH信任关系注意：                                                  nn01和nn02互相连接不需要密码，nn02连接自己和node1，node2，node3同样不需要密码     
+                                                                       [root@nn02 ~]# vim /etc/ssh/ssh_config
+                                                                                 Host *
+                                                                                GSSAPIAuthentication yes
+                                                                                StrictHostKeyChecking no
+                                                                        [root@nn01 hadoop]# cd /root/.ssh/
+                                                                        [root@nn01 .ssh]# scp id_rsa id_rsa.pub  nn02:/root/.ssh/    
+                                                                        //把nn01的公钥私钥考给nn02 
+7）所有的主机删除/var/hadoop/*                                             [root@nn01 .ssh]# rm -rf /var/hadoop/*
+
+8）配置 core-site                                                         
+[root@nn01 .ssh]# vim /usr/local/hadoop/etc/hadoop/core-site.xml
+<configuration>
+<property>
+        <name>fs.defaultFS</name>
+        <value>hdfs://nsdcluster</value>    
+//nsdcluster是随便起的名。相当于一个组，访问的时候访问这个组
+    </property>
+    <property>
+        <name>hadoop.tmp.dir</name>
+        <value>/var/hadoop</value>
+    </property>
+    <property>
+        <name>ha.zookeeper.quorum</name>
+        <value>node1:2181,node2:2181,node3:2181</value>    //zookeepe的地址
+    </property>
+    <property>
+        <name>hadoop.proxyuser.nfs.groups</name>
+        <value>*</value>
+    </property>
+    <property>
+        <name>hadoop.proxyuser.nfs.hosts</name>
+        <value>*</value>
+    </property>
+</configuration>
+9）配置 hdfs-site
+
+[root@nn01 ~]# vim /usr/local/hadoop/etc/hadoop/hdfs-site.xml
+<configuration>
+    <property>
+        <name>dfs.replication</name>
+        <value>2</value>
+    </property>
+    <property>
+        <name>dfs.nameservices</name>
+        <value>nsdcluster</value>
+    </property>
+    <property>
+        <name>dfs.ha.namenodes.nsdcluster</name>                
+//nn1,nn2名称固定，是内置的变量，nsdcluster里面有nn1，nn2
+        <value>nn1,nn2</value>
+    </property>
+    <property>
+        <name>dfs.namenode.rpc-address.nsdcluster.nn1</name>        
+//声明nn1 8020为通讯端口，是nn01的rpc通讯端口
+        <value>nn01:8020</value>
+    </property>
+    <property>
+        <name>dfs.namenode.rpc-address.nsdcluster.nn2</name>        
+//声明nn2是谁，nn02的rpc通讯端口
+        <value>nn02:8020</value>
+    </property>
+    <property>
+        <name>dfs.namenode.http-address.nsdcluster.nn1</name>    
+//nn01的http通讯端口
+        <value>nn01:50070</value>
+    </property>
+    <property>
+        <name>dfs.namenode.http-address.nsdcluster.nn2</name>     
+//nn01和nn02的http通讯端口
+        <value>nn02:50070</value>
+    </property>
+    <property>
+        <name>dfs.namenode.shared.edits.dir</name>        
+//指定namenode元数据存储在journalnode中的路径
+        <value>qjournal://node1:8485;node2:8485;node3:8485/nsdcluster</value>
+    </property>
+
+ <property>
+        <name>dfs.journalnode.edits.dir</name>            
+//指定journalnode日志文件存储的路径
+        <value>/var/hadoop/journal</value>
+    </property>
+    <property>
+        <name>dfs.client.failover.proxy.provider.nsdcluster</name>    
+//指定HDFS客户端连接active namenode的java类
+        <value>org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider</value>
+    </property>
+    <property>
+        <name>dfs.ha.fencing.methods</name>                    //配置隔离机制为ssh
+        <value>sshfence</value>
+    </property>
+    <property>
+        <name>dfs.ha.fencing.ssh.private-key-files</name>    //指定密钥的位置
+        <value>/root/.ssh/id_rsa</value>
+    </property>
+    <property>
+        <name>dfs.ha.automatic-failover.enabled</name>        //开启自动故障转移
+        <value>true</value>                
+    </property>
+</configuration>
+10）配置yarn-site
+[root@nn01 ~]# vim /usr/local/hadoop/etc/hadoop/yarn-site.xml
+<configuration>
+<!-- Site specific YARN configuration properties -->
+    <property>
+        <name>yarn.nodemanager.aux-services</name>
+        <value>mapreduce_shuffle</value>
+    </property>
+    <property>
+        <name>yarn.resourcemanager.ha.enabled</name>
+        <value>true</value>
+    </property> 
+    <property>
+        <name>yarn.resourcemanager.ha.rm-ids</name>        //rm1,rm2代表nn01和nn02
+        <value>rm1,rm2</value>
+    </property>
+    <property>
+        <name>yarn.resourcemanager.recovery.enabled</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>yarn.resourcemanager.store.class</name>
+        <value>org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore</value>
+    </property>
+    <property>
+        <name>yarn.resourcemanager.zk-address</name>
+        <value>node1:2181,node2:2181,node3:2181</value>
+    </property>
+    <property>
+        <name>yarn.resourcemanager.cluster-id</name>
+        <value>yarn-ha</value>
+    </property>
+    <property>
+        <name>yarn.resourcemanager.hostname.rm1</name>
+        <value>nn01</value>
+    </property>
+    <property>
+        <name>yarn.resourcemanager.hostname.rm2</name>
+        <value>nn02</value>
+    </property>
+</configuration>
+11）同步到nn02，node1，node2，node3
+[root@nn01 ~]# for i in {61..63} 66; do rsync -aSH --delete /usr/local/hadoop/ 192.168.1.$i:/usr/local/hadoop  -e 'ssh' & done
+[1] 25411
+[2] 25412
+[3] 25413
+[4] 25414
+12）删除所有机器上面的/user/local/hadoop/logs，方便排错
+[root@nn01 ~]# for i in {60..63} 66; do ssh 192.168.1.$i rm -rf /usr/local/hadoop/logs ; done
+13）同步配置
+[root@nn01 ~]# for i in {61..63} 66; do rsync -aSH --delete /usr/local/hadoop 192.168.1.$i:/usr/local/hadoop -e 'ssh' & done
+[1] 28235
+[2] 28236
+[3] 28237
+[4] 28238
+
+
+ 案例4：高可用验证
+  
+本案例要求：
+初始化集群
+验证集群
+4.2 步骤
+
+实现此案例需要按照如下步骤进行。
+步骤一：验证hadoop的高可用
+
+1）初始化ZK集群
+[root@nn01 ~]# /usr/local/hadoop/bin/hdfs zkfc -formatZK 
+...
+18/09/11 15:43:35 INFO ha.ActiveStandbyElector: Successfully created /hadoop-ha/nsdcluster in ZK    //出现Successfully即为成功
+...
+2）在node1，node2，node3上面启动journalnode服务（以node1为例子）
+[root@node1 ~]# /usr/local/hadoop/sbin/hadoop-daemon.sh start journalnode 
+starting journalnode, logging to /usr/local/hadoop/logs/hadoop-root-journalnode-node1.out
+[root@node1 ~]# jps
+29262 JournalNode
+26895 QuorumPeerMain
+29311 Jps
+3）格式化，先在node1，node2，node3上面启动journalnode才能格式化
+[root@nn01 ~]# /usr/local/hadoop//bin/hdfs  namenode  -format   
+//出现Successfully即为成功
+[root@nn01 hadoop]# ls /var/hadoop/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
