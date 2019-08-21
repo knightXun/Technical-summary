@@ -302,3 +302,348 @@ id pool image        snap device
 0  rbd  image        -    /dev/rbd0
 //语法格式:
 [root@client ~]# rbd unmap /dev/rbd0
+
+
+
+
+
+案例1：Keepalived高可用
+案例2：部署Ceph分布式存储
+1 案例1：Keepalived高可用
+1.1 问题
+
+部署两台代理服务器，实现如下效果：
+利用keepalived实现两台代理服务器的高可用
+配置VIP为192.168.4.80
+修改对应的域名解析记录
+1.2 方案
+
+实验拓扑如图-1所示，做具体实验前请先配置好环境。
+
+图-1
+备注：实际操作中DNS服务代理服务器部署在同一台主机上（节约虚拟机资源）。
+主机配置如表-1所示。
+表-1
+
+1.3 步骤
+
+实现此案例需要按照如下步骤进行。
+步骤一：配置第二台代理服务器
+
+1）部署HAProxy
+安装软件，手动修改配置文件，添加如下内容。
+[root@proxy2 ~]# yum -y install haproxy 
+[root@proxy2 ~]# vim /etc/haproxy/haproxy.cfg
+listen wordpress *:80
+  balance roundrobin
+  server web1 192.168.2.11:80 check inter 2000 rise 2 fall 3
+  server web2 192.168.2.12:80 check inter 2000 rise 2 fall 3
+  server web3 192.168.2.13:80 check inter 2000 rise 2 fall 3
+[root@proxy2 ~]# systemctl start haproxy
+[root@proxy2 ~]# systemctl enable haproxy
+步骤二：为两台代理服务器配置keepalived
+
+1）配置第一台代理服务器proxy（192.168.4.5）。
+[root@proxy ~]# yum install -y keepalived
+[root@proxy ~]# vim /etc/keepalived/keepalived.conf
+global_defs {
+  router_id  proxy1                        //设置路由ID号
+  vrrp_iptables                               //不添加任何防火墙规则
+}
+vrrp_instance VI_1 {
+  state MASTER                         //主服务器为MASTER（备服务器需要修改为BACKUP）
+  interface eth0                    //定义网络接口
+  virtual_router_id 51                
+  priority 100                     //服务器优先级,优先级高优先获取VIP（实验需要修改）
+  advert_int 1
+  authentication {
+    auth_type pass
+    auth_pass 1111                       //主备服务器密码必须一致
+  }
+  virtual_ipaddress {                   //谁是主服务器谁获得该VIP（实验需要修改）
+192.168.4.80 
+}    
+}
+[root@proxy ~]# systemctl start keepalived
+！！！重要！！！
+在全局配置global_defs{}中手动添加vrrp_iptables，即可解决防火墙的问题。
+2）配置第二台代理服务器proxy（192.168.4.6）。
+[root@proxy2 ~]# yum install -y keepalived
+[root@proxy2 ~]# vim /etc/keepalived/keepalived.conf
+global_defs {
+  router_id  proxy2                        //设置路由ID号
+vrrp_iptables                               //不添加任何防火墙规则
+}
+vrrp_instance VI_1 {
+  state BACKUP                         //主服务器为MASTER（备服务器需要修改为BACKUP）
+  interface eth0                    //定义网络接口
+  virtual_router_id 51                
+  priority 50                         //服务器优先级,优先级高优先获取VIP
+  advert_int 1
+  authentication {
+    auth_type pass
+    auth_pass 1111                       //主备服务器密码必须一致
+  }
+  virtual_ipaddress {                   //谁是主服务器谁获得该VIP
+192.168.4.80 
+}    
+}
+[root@proxy2 ~]# systemctl start keepalived
+！！！重要！！！
+在全局配置global_defs{}中手动添加vrrp_iptables，即可解决防火墙的问题。
+步骤三：修改DNS服务器
+
+1）修改网站域名对应的解析记录，解析到新的VIP地址。
+192.168.4.5为DNS服务器。
+[root@proxy ~]# vim /var/named/lab.com.zone
+$TTL 1D
+@       IN SOA  @ rname.invalid. (
+                                        0       ; serial
+                                        1D      ; refresh
+                                        1H      ; retry
+                                        1W      ; expire
+                                        3H )    ; minimum
+@       NS      dns.lab.com.
+dns     A       192.168.4.5
+www     A       192.168.4.80
+2）重启DNS服务
+[root@proxy ~]# systemctl restart named
+2 案例2：部署Ceph分布式存储
+2.1 问题
+
+部署Ceph分布式存储，实现如下效果：
+使用三台服务器部署Ceph分布式存储
+实现Ceph文件系统共享
+将网站数据从NFS迁移到Ceph存储
+2.2 方案
+
+实验拓扑如图-2所示，做具体实验前请先配置好环境。
+
+图-2
+备注：实际操作中DNS服务代理服务器部署在同一台主机上（节约虚拟机资源）。
+主机配置如表-2所示。
+表-2
+
+2.3 步骤
+
+实现此案例需要按照如下步骤进行。
+步骤一：准备实验环境
+
+1）物理机为所有节点配置yum源服务器。
+提示：ceph10.iso在/linux-soft/02目录。
+[root@room9pc01 ~]# mkdir  /var/ftp/ceph
+[root@room9pc01 ~]# mount ceph10.iso /var/ftp/ceph/
+2）在node1配置SSH密钥，让node1可用无密码连接node1,node2,node3
+[root@node1 ~]# ssh-keygen  -f /root/.ssh/id_rsa  -N  ''
+[root@node1 ~]# for i in   41  42  43
+do
+ssh-copy-id  192.168.2.$i
+done
+3)修改/etc/hosts域名解析记录（不要删除原有的数据），同步给所有ceph节点。
+[root@node1 ~]# vim /etc/hosts
+192.168.2.41    node1
+192.168.2.42     node2
+192.168.2.43    node3
+[root@node1 ~]# for i in 41 42 43
+do
+     scp /etc/hosts 192.168.2.$i:/etc
+done
+4）为所有ceph节点配置yum源，并将配置同步给所有节点
+[root@node1 ~]# cat /etc/yum.repos.d/ceph.repo
+[mon]
+name=mon
+baseurl=ftp://192.168.2.254/ceph/MON
+gpgcheck=0
+[osd]
+name=osd
+baseurl=ftp://192.168.2.254/ceph/OSD
+gpgcheck=0
+[tools]
+name=tools
+baseurl=ftp://192.168.2.254/ceph/Tools
+gpgcheck=0
+[root@node1 ~]# yum repolist                #验证YUM源软件数量
+源标识            源名称                    状态
+Dvd                redhat                    9,911
+Mon                mon                        41
+Osd                osd                        28
+Tools            tools                    33
+repolist: 10,013
+[root@node1 ~]# for i in 41 42 43
+do
+     scp /etc/yum.repos.d/ceph.repo 192.168.2.$i:/etc/yum.repos.d/
+done
+5）所有节点主机与真实主机的NTP服务器同步时间。
+提示：默认真实物理机已经配置为NTP服务器。
+[root@node1 ~]# vim /etc/chrony.conf
+… …
+server 192.168.2.254   iburst
+[root@node1 ~]# for i in 41  42  43
+do
+     scp /etc/chrony.conf 192.168.2.$i:/etc/
+     ssh 192.168.2.$i "systemctl restart chronyd"
+done
+6）使用virt-manager为三台ceph虚拟机添加磁盘。
+每台虚拟机添加3块20G的磁盘。
+步骤二：部署ceph集群
+
+1）给node1主机安装ceph-deploy，创建工作目录，初始化配置文件。
+[root@node1 ~]# yum -y install ceph-deploy
+[root@node1 ~]# mkdir ceph-cluster
+[root@node1 ~]# cd ceph-cluster
+[root@node1 ceph-cluster]# ceph-deploy new node1 node2 node3
+2）给所有ceph节点安装ceph相关软件包
+[root@node1 ceph-cluster]# for i in node1 node2 node3
+do
+     ssh $i "yum -y install ceph-mon ceph-osd ceph-mds"
+done
+[root@node1 ceph-cluster]# ceph-deploy mon create-initial
+[root@node1 ceph-cluster]# ceph -s                    #查看结果
+    cluster 9f3e04b8-7dbb-43da-abe6-b9e3f5e46d2e
+     health HEALTH_ERR
+     monmap e2: 3 mons at
+ {node1=192.168.2.41:6789/0,node2=192.168.2.42:6789/0,node3=192.168.2.43:6789/0}
+     
+osdmap e45: 0 osds: 0 up, 0 in
+3）准备磁盘分区，创建journal盘，并永久修改设备权限。
+[root@node1 ceph-cluster]# for i in node1 node2 node3
+do
+     ssh $i "parted /dev/vdb mklabel gpt"
+     ssh $i "parted /dev/vdb mkpart primary 1 50%"
+     ssh $i "parted /dev/vdb mkpart primary 50% 100%"
+ done
+提示：下面的步骤在所有主机都需要操作（node1，node2，node3）
+#临时修改权限：
+[root@node1 ceph-cluster]# chown  ceph.ceph  /dev/vdb1
+[root@node1 ceph-cluster]# chown  ceph.ceph  /dev/vdb2
+#永久修改权限：
+[root@node1 ceph-cluster]# vim /etc/udev/rules.d/70-vdb.rules
+ENV{DEVNAME}=="/dev/vdb1",OWNER="ceph",GROUP="ceph"
+ENV{DEVNAME}=="/dev/vdb2",OWNER="ceph",GROUP="ceph"
+4）使用ceph-deploy工具初始化数据磁盘（仅node1操作）。
+[root@node1 ceph-cluster]# ceph-deploy disk  zap  node1:vdc   node1:vdd    
+[root@node1 ceph-cluster]# ceph-deploy disk  zap  node2:vdc   node2:vdd
+[root@node1 ceph-cluster]# ceph-deploy disk  zap  node3:vdc   node3:vdd  
+5）初始化OSD集群。
+[root@node1 ceph-cluster]# ceph-deploy osd create \
+ node1:vdc:/dev/vdb1 node1:vdd:/dev/vdb2  
+//创建osd存储设备，vdc为集群提供存储空间，vdb1提供JOURNAL缓存，
+//一个存储设备对应一个缓存设备，缓存需要SSD，不需要很大
+[root@node1 ceph-cluster]# ceph-deploy osd create \
+ node2:vdc:/dev/vdb1 node2:vdd:/dev/vdb2
+[root@node1 ceph-cluster]# ceph-deploy osd create \
+ node3:vdc:/dev/vdb1 node3:vdd:/dev/vdb2 
+[root@node1 ceph-cluster]# ceph -s                 #查看集群状态
+cluster 9f3e04b8-7dbb-43da-abe6-b9e3f5e46d2e
+health HEALTH_OK
+     monmap e2: 3 mons at {node1=192.168.4.11:6789/0,node2=192.168.4.12:6789/0,node3=192.168.4.13:6789/0}
+            election epoch 6, quorum 0,1,2 node1,node2,node3
+     osdmap e45: 6 osds: 6 up, 6 in
+            flags sortbitwise
+      pgmap v25712: 64 pgs, 1 pools, 86465 kB data, 2612 objects
+            508 MB used, 119 GB / 119 GB avail
+                  64 active+clean
+步骤三：部署ceph文件系统
+
+1）启动mds服务
+[root@node1 ceph-cluster]# ceph-deploy mds create node3
+2）创建存储池（文件系统由inode和block组成）
+[root@node1 ceph-cluster]# ceph osd pool create cephfs_data 128
+[root@node1 ceph-cluster]# ceph osd pool create cephfs_metadata 128
+[root@node1 ceph-cluster]# ceph osd lspools
+0 rbd,1 cephfs_data,2 cephfs_metadata
+3）创建文件系统
+[root@node1 ceph-cluster]# ceph fs new myfs1 cephfs_metadata cephfs_data
+[root@node1 ceph-cluster]# ceph fs ls
+name: myfs1, metadata pool: cephfs_metadata, data pools: [cephfs_data ]
+步骤四：迁移网站数据到ceph集群
+
+1）卸载web1，web2，web3的NFS共享。
+暂停服务防止有人实时读写文件。
+[root@web1 ~]# /usr/local/nginx/sbin/nginx -s stop
+[root@web2 ~]# /usr/local/nginx/sbin/nginx -s stop
+[root@web3 ~]# /usr/local/nginx/sbin/nginx -s stop
+[root@web1 ~]# umount /usr/local/nginx/html
+[root@web2 ~]# umount /usr/local/nginx/html
+[root@web3 ~]# umount /usr/local/nginx/html
+[root@web1 ~]# vim /etc/fstab
+#192.168.2.31:/web_share/html /usr/local/nginx/html/ nfs defaults 0 0
+[root@web2 ~]# vim /etc/fstab
+#192.168.2.31:/web_share/html /usr/local/nginx/html/ nfs defaults 0 0
+[root@web3 ~]# vim /etc/fstab
+#192.168.2.31:/web_share/html /usr/local/nginx/html/ nfs defaults 0 0
+2）web服务器永久挂载Ceph文件系统（web1、web2、web3都需要操作）。
+在任意ceph节点，如node1查看ceph账户与密码。
+[root@node1 ~]# cat /etc/ceph/ceph.client.admin.keyring 
+[client.admin]
+    key = AQA0KtlcRGz5JxAA/K0AD/uNuLI1RqPsNGC7zg==
+/etc/rc.local是开机启动脚本，任何命令放在该文件中都是开机自启。
+[root@web1 ~]#  mount -t ceph 192.168.2.41:6789:/ /usr/local/nginx/html/ \
+-o name=admin,secret=AQA0KtlcRGz5JxAA/K0AD/uNuLI1RqPsNGC7zg==
+[root@web1 ~]# echo 'mount -t ceph 192.168.2.41:6789:/ /usr/local/nginx/html/ \
+-o name=admin,secret=AQA0KtlcRGz5JxAA/K0AD/uNuLI1RqPsNGC7zg==' >> /etc/rc.local 
+[root@web1 ~]# chmod +x /etc/rc.local
+[root@web2 ~]#  mount -t ceph 192.168.2.41:6789:/ /usr/local/nginx/html/ \
+-o name=admin,secret=AQA0KtlcRGz5JxAA/K0AD/uNuLI1RqPsNGC7zg==
+[root@web2 ~]# echo 'mount -t ceph 192.168.2.41:6789:/ /usr/local/nginx/html/ \
+-o name=admin,secret=AQA0KtlcRGz5JxAA/K0AD/uNuLI1RqPsNGC7zg==' >> /etc/rc.local 
+[root@web2 ~]# chmod +x /etc/rc.local
+[root@web3 ~]#  mount -t ceph 192.168.2.41:6789:/ /usr/local/nginx/html/ \
+-o name=admin,secret=AQA0KtlcRGz5JxAA/K0AD/uNuLI1RqPsNGC7zg==
+[root@web3 ~]# echo 'mount -t ceph 192.168.2.41:6789:/ /usr/local/nginx/html/ \
+-o name=admin,secret=AQA0KtlcRGz5JxAA/K0AD/uNuLI1RqPsNGC7zg==' >> /etc/rc.local 
+[root@web3 ~]# chmod +x /etc/rc.local
+另一种解决方案，还可以通过fstab实现永久挂载。
+提示：如果希望使用fstab实现永久挂载，客户端需要额外安装libcephfs1软件包。
+[root@web1 ~]# yum -y install libcephfs1
+[root@web1 ~]# vim /etc/fstab
+… …
+192.168.4.11:/ /usr/local/nginx/html/    ceph   defaults,_netdev,name=admin,secret=AQCVcu9cWXkgKhAAWSa7qCFnFVbNCTB2DwGIOA== 0 0
+3)迁移NFS服务器中的数据到Ceph存储
+登陆NFS服务器备份数据，将备份数据拷贝给web1或web2或web3，tar备份数据时注意使用-f选项保留文件权限。
+[root@nfs ~]# cd /web_share/html/
+[root@nfs html]# tar -czpf /root/html.tar.gz ./*
+[root@nfs html]# scp /root/html.tar.gz 192.168.2.11:/usr/local/nginx/html/
+登陆web1将数据恢复到Ceph共享目录
+[root@web1 html]# tar -xf html.tar.gz
+[root@web1 html]# rm -rf html.tar.gz
+4）恢复web服务
+[root@web1 ~]# /usr/local/nginx/sbin/nginx
+[root@web2 ~]# /usr/local/nginx/sbin/nginx
+[root@web3 ~]# /usr/local/nginx/sbin/nginx
+附加知识（常见面试题）
+
+1) 如何使用awk查看TCP连接状态？
+答：ss -ant |awk '{print $1}'
+netstat -ant |awk '{print $6}'
+2) 有个txt文件内容如下：
+http://a.domain.com/l.html
+http://b.domain.com/l.html
+http://c.domain.com/l.html
+http://a.domain.com/2.html
+http://b.domain.com/2.html
+http://a.domain.com/3.html
+要求：得到主机名（和域名），并统计每个网址出现的次数，并排序。可以 shell 或 C
+得到的结果应该是：
+答：
+#！/bin/bash
+awk -F"[/.]" '{print $3}' txt
+awk -F"[/]" '{print $3}' txt |awk '{IP[$1]++} END {for(i in IP){print IP[i],i}}' |sort –n
+3) 至少说出一种linux下实现高可用的方案名称？
+答：keepalived，HeartBeat
+4）简述下负载均衡与高可用的概念？
+答：
+LB : 多台数据平均响应客户端的多次连接请求。
+HA : 主备模式，主服务器宕机后 备用服务器才接替工作。
+
+
+
+
+
+
+
+
+
+
+
+
