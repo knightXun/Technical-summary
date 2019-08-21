@@ -1,0 +1,217 @@
+
+
+nginx官网: http://nginx.org/en/docs/
+
+
+一键安装nginx服务
+yum -y install gcc openssl-devel pcre-devel
+tar -xvf nginx-1.12.2.tar.gz
+cd nginx-1.12.2
+./configure 
+make && make install
+
+ 将nginx可以systemctl 命令使用
+ vim /usr/lib/systemd/system/nginx.service 
+
+[Unit]
+Description=nginx - high performance web server
+Documentation=http://nginx.org/en/docs/
+After=network.target remote-fs.target nss-lookup.target
+
+[Service]
+Type=forking
+PIDFile=/usr/local/nginx/logs/nginx.pid
+ExecStartPre=/usr/local/nginx/sbin/nginx -t -c /usr/local/nginx/conf/nginx.conf
+ExecStart=/usr/local/nginx/sbin/nginx -c /usr/local/nginx/conf/nginx.conf
+ExecReload=/usr/local/nginx/sbin/nginx -s reload
+ExecStop=/usr/local/nginx/sbin/nginx -s quit
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+
+
+LNMP常见问题
+#请先确保nginx是启动状态，否则运行该命令会报错,报错信息如下：
+#[error] open() "/usr/local/nginx/logs/nginx.pid" failed (2: No such file or directory)
+Nginx的默认访问日志文件为/usr/local/nginx/logs/access.log
+Nginx的默认错误日志文件为/usr/local/nginx/logs/error.log
+PHP默认错误日志文件为/var/log/php-fpm/www-error.log
+如果动态网站访问失败，可用参考错误日志，查找错误信息。
+
+
+
+构建lnmp平台
+
+yum -y install gcc openssl-devel pcre-devel
+tar -xvf nginx-1.12.2.tar.gz
+cd nginx-1.12.2
+10
+./configure 
+make && make install
+
+yum -y install   mariadb   mariadb-server   mariadb-devel
+yum -y  install  php   php-mysql   php-fpm
+
+systemctl start  nginx  mariadb php-fpm 
+systemctl enable nginx  mariadb php-fpm 
+
+vim /etc/php-fpm.d/www.conf
+[www]
+listen = 127.0.0.1:9000               //PHP端口号
+pm.max_children = 32                  //最大进程数量
+pm.start_servers = 15                 //最小进程数量
+pm.min_spare_servers = 5              //最少需要几个空闲着的进程
+pm.max_spare_servers = 32             //最多允许几个进程处于空闲状态
+
+vim /usr/local/nginx/conf/nginx.conf
+location / {
+            root   html;
+            index  index.php  index.html   index.htm;
+#设置默认首页为index.php，当用户在浏览器地址栏中只写域名或IP，不说访问什么页面时，服务器会把默认首页index.php返回给用户
+        }
+ location  ~  \.php$  {
+            root           html;
+            fastcgi_pass   127.0.0.1:9000;    #将请求转发给本机9000端口，PHP解释器
+            fastcgi_index  index.php;
+            #fastcgi_param   SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+            include        fastcgi.conf;       #加载其他配置文件
+        }
+/usr/local/nginx/sbin/nginx -s reload
+
+
+1)创建PHP页面，测试LNMP架构能否解析PHP页面
+vim /usr/local/nginx/html/test.php
+<?php
+$i="This is a test Page";
+echo $i;
+?>
+
+2)创建PHP测试页面,连接并查询MariaDB数据库。
+vim /usr/local/nginx/html/mysql.php
+<?php
+$mysqli = new mysqli('localhost','root','密码','mysql');
+//注意：root为mysql数据库的账户名称，密码需要修改为实际mysql密码，无密码则留空即可
+//localhost是数据库的域名或IP，mysql是数据库的名称
+if (mysqli_connect_errno()){
+    die('Unable to connect!'). mysqli_connect_error();
+}
+$sql = "select * from user";
+$result = $mysqli->query($sql);
+while($row = $result->fetch_array()){
+    printf("Host:%s",$row[0]);
+    printf("</br>");
+    printf("Name:%s",$row[1]);
+    printf("</br>");
+}
+?>
+
+3）客户端使用浏览器访问服务器PHP首页文档，检验是否成功：
+firefox http://192.168.4.5/test.php
+firefox http://192.168.4.5/mysql.php
+
+
+***********************************************************************************************************************
+
+
+地址重写格式【总结】
+rewrite 旧地址 新地址 [选项];
+last 不再读其他rewrite
+break 不再读其他语句，结束请求
+redirect 临时重定向
+permament 永久重定向
+
+地址重写
+vim /usr/local/nginx/conf/nginx.conf
+.. ..
+server {
+        listen       80;
+        server_name  localhost;
+rewrite /a.html  /b.html;            
+location / {
+    root   html;
+index  index.html index.htm;
+}
+}
+
+
+访问a.html重定向到b.html（跳转地址栏）
+vim /usr/local/nginx/conf/nginx.conf
+.. ..
+server {
+        listen       80;
+        server_name  localhost;
+rewrite /a.html  /b.html  redirect;            
+location / {
+    root   html;
+index  index.html index.htm;
+}
+}
+
+修改配置文件(访问192.168.4.5的请求重定向至www.tmooc.cn)
+vim /usr/local/nginx/conf/nginx.conf
+.. ..
+server {
+        listen       80;
+        server_name  localhost;
+rewrite ^/  http://www.tmooc.cn/;
+location / {
+    root   html;
+index  index.html index.htm;
+# rewrite /a.html  /b.html  redirect;
+}
+}
+
+修改配置文件(访问192.168.4.5/下面子页面，重定向至www.tmooc.cn/下相同的页面)
+vim /usr/local/nginx/conf/nginx.conf
+.. ..
+server {
+        listen       80;
+        server_name  localhost;
+rewrite ^/(.*)$  http://www.tmooc.cn/$1;
+location / {
+    root   html;
+index  index.html index.htm;
+}
+}
+
+修改配置文件(实现curl和火狐访问相同链接返回的页面不同)
+1) 创建网页目录以及对应的页面文件：
+ echo "I am Normal page" > /usr/local/nginx/html/test.html
+ mkdir  -p  /usr/local/nginx/html/firefox/
+ echo "firefox page" > /usr/local/nginx/html/firefox/test.html
+
+vim /usr/local/nginx/conf/nginx.conf
+.. ..
+server {
+        listen       80;
+        server_name  localhost;
+location / {
+    root   html;
+index  index.html index.htm;
+}
+#这里，~符号代表正则匹配，*符号代表不区分大小写
+if ($http_user_agent ~* firefox) {            //识别客户端firefox浏览器
+rewrite ^(.*)$  /firefox/$1;
+}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
