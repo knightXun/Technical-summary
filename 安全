@@ -1,0 +1,655 @@
+1.加密与解密
+
+1.1加/解密概述:
+Hash摘要:检验完整性 :
+                               MD5校验     md5sum  任何文件
+                               SHA校验     sha1sum 任何文件
+
+
+
+1.2 GPG加/解密及数字签名:           官网:http://www.gnupg.org/
+                                       软件包:gnupg2-2.0.22-4.el7.x86_64
+                                       查看版本: gpg --version                                 
+                                       查看软件描述: rpm -qi gnupg2
+
+1.2.1gpg数据对称加密与解密文件:           
+                              
+                                       发送方  加密 (明文---> 密文)
+                                gpg -c 加密文件
+                                      接收方  解密 (密文---->明文)
+                                gpg -d 解密文件  > ~/a.txt
+                         
+
+1.2.2gpg数据非对称加密与解密文件:(公钥文件加密,私钥文件解密)
+                               mv /dev/random /dev/randoma
+                               ln -s /dev/urandom /dev/random
+
+
+           工作过程             接收方 userb 
+                               rm -rf ~/.gnupg/  密钥对文件 
+                               1.创建密钥对  gpg --gen-key
+                               2.导出公钥    gpg --export -a  > userb.pub -a:可读
+                               3.共享公钥    mv userb.pub /共享目录 
+                                                   
+                                发送方 usera
+                                1.导入公钥        gpg --import 公钥文件
+                                2.使用公钥加密文件 gpg -e -r 用户名 文件   -e:加密
+                                3.共享加密文件     mv 加密文件  /共享目录
+                                4.userb解密文件   gpg -d  加密文件 > ~/文件
+ 
+ 1.2.3gpg数字签名与验证签名(私钥文件签名 公钥文件验证签名) 
+ 生产环境签名应用                     userb   userb -b /文件名  做数字签名,并共享签名文件及原文件          
+                                    vim ~/t.txt
+                                    cat ~/t.txt
+                                    gpg -b ~/t.txt
+                                    mv t.txt* /tmp
+                                                       
+                                    usera   gpg --verify /共享目录/文件名   做验证数字签名
+                                    cat /tmp/t.txt                 
+                                    gpg --verify /tmp/t.txt.sig
+                                                       
+                                                       
+                                                       
+ *********************************************************************************************************
+ 
+ 
+2.AIED入侵检测系统:
+AIED服务的使用    1. 软件包:aide  yum -y install aide.x86_64
+                 2.主配置文件:    vim /etc/aide.conf
+                                @@define DBDIR /var/lib/aide       //数据库目录  DBDIR:变量  /var/lib/aide:值
+                                @@define LOGDIR /var/log/aide      //日志目录
+                                database=file:@@{DBDIR}/aide.db.gz //数据库文件名
+                      
+                 3. 测试:  sed -i '99,312s/^/#/' /etc/aide.conf
+                           vim +98 /etc/aide.conf
+                           /root/  FIPSR 
+                 4. 始化检测:   aide --init 
+                  保存到路径: /avr/lib/aide/aide.db.new.gz
+                           cp /var/lib/aide/aide.db.new.gz /opt/   做备份
+                           cd /var/lib/aide/
+                            mv aide.db.new.gz aide.db.gz            只检测aide.db.new.gz文件,得改名
+                            ls /var/lib/aide/
+                  5. 对检测的目录/root做操作
+                  6.入侵检查:aide --check 
+           
+**************************************************************************************************************
+
+
+3.扫描与抓包     
+               扫描方式及工具 :Scan,主动探测
+                             Sniff,被动监听/嗅探
+                             Capture,数据包捕获(抓包)
+               常用的安全分析工具 
+                扫描器:NMAP
+                协议分析:tcpdump,wireShark
+                
+                
+
+3.1 nmap扫描:  默认扫描TCP协议  nmap软件包
+           
+           基本用法:nmap [扫描类型] [选项] <扫描目标>                   
+           例子:   nmap -sS -n -p 21-3306,6379,27017 176.121.213.111 -n:不执行DNS扫描
+           扫描类型:nmap  -sP  ICMP扫描 ping
+                         -A   目标系统全面分析复 A是合选项 =-O(OS检测),-sV(版本检测),-sC(脚本检测),traceroute跟踪 
+                         -sS  TCP SYN扫描(半开) DDos攻击
+                         -sT  TCP连接扫描(全开)
+                         -sU  UDP扫描                         
+                         
+3.2 tcpdump抓包  tcpdump-4.9.2-3.el7.x86_64软件包
+
+基本用法 tcpdump [选项] [过滤条件]
+例子:tcpdump -c 2 
+                                  常见监控选项
+                                  -i 指定监控的网络接口 默认监视0口
+                                  -c 定义抓包个数
+                                  -w 将数据包信息保存到指定文件
+                                  -r 从指定文件读取数据包信息
+                                  -A 转换为ACSII码,以方便阅读
+
+
+tcpdump的过滤条件：  
+                                   类型：host、net、port、portrange
+                                   方向：src、dst
+                                   协议：tcp、udp、ip、wlan、arp、……
+                                   多个条件组合：and、or、not
+
+
+tcpdump -A host 192.168.4.254 and tcp port 21 抓登陆我的ftp的主机,条件抓254主机的
+
+tcpdump -A -r ftp2.cap | grep -i pass  抓用户的登陆密码
+
+
+wireshark协议分析器(图形界面)
+yum list | grep wireshark 查看需要的软件包
+yum -y install wireshark-gnome.x86_64
+
+*********************************************************************************************************************
+
+系统审计  
+
+概述:审计的目的是基于事先配置的规则生成日志，记录可能发生在系统上的事件（正常或非正常行为的事件），
+审计不会为系统提供额外的安全保护，但她会发现并记录违反安全策略的人及其对应的行为。
+
+审计能够记录的日志内容：
+
+a) 日期与事件以及事件的结果
+b) 触发事件的用户
+c) 所有认证机制的使用都可以被记录，如ssh等
+d) 对关键数据文件的修改行为等都可以被记录
+
+
+软件包:audit
+主配置文件/etc/audit/auditd.conf
+                                  yum -y  install  audit				  安装软件包
+                                  cat /etc/audit/auditd.conf			查看配置文件，确定日志位置
+                                  log_file = /var/log/audit/audit.log 日志文件路径
+
+                                   vim /var/log/audit/audit.log  里面放审计规则
+
+自定义审计规则(命令行临时):
+可以使用auditctl命令控制审计系统并设置规则决定哪些行为会被记录日志
+
+ 查询状态                        auditctl  -s  
+ 查看规则                        auditctl  -l	
+ 删除所有规则                     auditctl  -D
+ 统计日志文件里的规则个数,生成报表   aureport 
+
+#语法格式：auditctl  -w  path  -p  permission  -k  key_name
+# path为需要审计的文件或目录
+# permission可以是r,w,x,a(文件或目录的属性发生变化)
+# Key_name为可选项，方便识别哪些规则生成特定的日志项
+
+auditctl -w /etc/passwd -p wa -k passwd_change
+//设置规则所有对passwd文件的写、属性修改操作都会被记录审计日志
+
+
+配置审计规则永久有效:
+                           vim /etc/audit/rules.d/audit.rules    查看列出规则,直接添加进去
+
+                            auditctl -w /etc/passwd -p wa -k disk_partition
+                        
+
+
+搜索日志
+ausearch -k disk_partition 查看以下信息
+type=CWD msg=audit(1564451173.519:12):  cwd="/root"
+type=EXECVE msg=audit(1564451173.519:12): argc=2 a0="fdisk" a1="/dev/vda"
+type=SYSCALL msg=audit(1564451173.519:12): arch=c000003e syscall=59 
+success=yes exit=0 a0=1c10e40 a1=1c0b150 a2=1c069f0 a3=7ffdcd6dc8a0 items=2 ppid=943 pid=1683 auid=0 
+uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=pts0 ses=1 
+comm="fdisk"exe="/usr/sbin/fdisk"subj=unconfined_u:unconfined_r:
+unconfined_t:s0-s0:c0.c1023 key="disk_parition"
+ 
+#内容分析
+# type为类型
+# msg为(time_stamp:ID)，时间是date +%s（1970-1-1至今的秒数）
+# arch=c000003e，代表x86_64（16进制）
+# success=yes/no，事件是否成功
+# a0-a3是程序调用时前2个参数，16进制编码了
+# ppid父进程ID，如bash，pid进程ID，如cat命令
+# auid是审核用户的id，su - test, 依然可以追踪su前的账户
+# uid，gid用户与组
+# tty:从哪个终端执行的命令
+# comm="fdisk"    		用户在命令行执行的指令
+# exe="/usr/sbin/fdisk"		实际程序的路径
+# key="disk_parit"	管理员定义的策略关键字key
+# type=CWD		用来记录当前工作目录
+# cwd="/home/username"
+# type=PATH
+# ouid(owner's user id）	对象所有者id
+# guid(owner's groupid）	对象所有者id
+
+2）通过工具搜索日志
+
+系统提供的ausearch命令可以方便的搜索特定日志，默认该程序会搜索/var/log/audit/audit.log，
+ausearch options -if file_name可以指定文件名。
+
+ausearch -k disk_partition -i	
+//根据key搜索日志，-i选项表示以交互式方式操作
+
+**********************************************************************************
+
+2.服务安全
+
+Nginx安全优化包括：删除不要的模块、修改版本信息、限制并发、拒绝非法请求、防止buffer溢出。
+
+MySQL安全优化包括：初始化安全脚本、密码安全、备份与还原、数据安全。
+
+Tomcat安全优化包括：隐藏版本信息、降权启动、删除默认测试页面.
+
+nginx服务安全: ./configure
+步骤一：优化Nginx服务的安全配置
+
+1） 删除不需要的模块Nignx是模块化设计的软件，需要什么功能与模块以及不需要哪些模块，都可以在编译安装软件
+时自定义，使用--with参数可以开启某些模块，使用--without可以禁用某些模块。最小化安装永远都是对的方案！
+
+  部署nginx服务:    tar -xf /root/nginx-1.12.2.tar.gz 
+                   yum -y install gcc pcre-devel zlib-devel
+                   cd nginx-1.12.2/
+                   ./configure 
+                    make
+                    make install
+2.1 优化配置
+
+1.安装软件时,禁用一些功能(自动索引):  --without禁用模块 
+           server {
+            autoindex on;
+           ......
+           }              
+
+添加 禁用自动索引文件目录模块   
+     ./configure --without-http_autoindex_module     
+     sed -i '36,s/^/#/' /usr/local/nginx/conf/nginx.conf      
+         
+****************************************************************************************
+
+2.2 修改源码软件版本
+默认Nginx会显示版本信息以及具体的版本号，这些信息给攻击者带来了便利性，
+便于他们找到具体版本的漏洞。
+如果需要屏蔽版本号信息，执行如下操作，可以隐藏版本号。             
+               curl -I http://192.168.4.50 查看版本信息
+
+ vim /usr/local/nginx/conf/nginx.conf
+
+ http{
+   server_tokens off; 在http下面手动添加这么一行
+   ......
+    }
+ 
+ vim /root/nginx-1.12.2/src/http/ngx_http_header_filter_module.c 修改版本文件   
+static u_char ngx_http_server_string[] = "Server: tomcat" CRLF;
+static u_char ngx_http_server_full_string[] = "Server: tomcat"  CRLF;
+static u_char ngx_http_server_build_string[] = "Server: tomcat" CRLF;
+
+重新编译安装:   ./configure --without-http_autoindex_module
+nginx -V: 重新调用先前编译的命令
+ 
+curl -I http://192.168.4.50 再次查看修改后的版本信息
+
+
+*******************************************************************************************
+
+2.3 限制并发
+DDOS攻击者会发送大量的并发连接，占用服务器资源（包括连接数、带宽等），这样
+会导致正常用户处于等待或无法访问服务器的状态。
+
+Nginx提供了一个ngx_http_limit_req_module模块，可以有效降低DDOS攻击的风险，操作方法如下：
+vim /usr/local/nginx/conf/nginx.conf
+… …
+http{
+… …
+limit_req_zone $binary_remote_addr zone=one:10m rate=1r/s; 
+	server {
+		listen 80;
+		server_name localhost;
+		limit_req zone=one burst=5;
+	        }
+}
+
+//备注说明：
+//limit_req_zone语法格式如下：
+//limit_req_zone key zone=name:size rate=rate;
+//上面案例中是将客户端IP信息存储名称为one的共享内存，内存空间为10M
+//1M可以存储8千个IP信息，10M可以存储8万个主机连接的状态，容量可以根据需要任意调整
+//每秒中仅接受1个请求，多余的放入漏斗
+//漏斗超过5个则报错
+
+nginx -t 测试配置
+/usr/local/nginx/sbin/nginx -s reload
+客户端使用ab测试软件测试效果：
+ ab -c 100 -n 100  http://192.168.4.5/
+ 
+ ************************************************************
+
+2.4拒绝非法请求
+网站使用的是HTTP协议，该协议中定义了很多方法，可以让用户连接服务器，获得需要的资源。
+但实际应用中一般仅需get和post。
+ip包 = 包头(头部信息)+数据
+通过如下设置可以让Nginx拒绝非法的请求方法：
+
+[root@proxy ~]# vim /usr/local/nginx/conf/nginx.conf
+http{
+       server {
+	             listen 80;
+#这里，!符号表示对正则取反，~符号是正则匹配符号
+#如果用户使用非GET或POST方法访问网站，则retrun返回444的错误信息
+              if ($request_method !~ ^(GET|POST)$ ) {
+                     return 444;
+               }	
+        }
+}
+[root@proxy ~]# /usr/local/nginx/sbin/nginx -s reload
+
+修改服务器配置后，客户端使用不同请求方法测试：
+
+[root@client ~]# curl -i -X GET  http://192.168.4.5			//正常
+[root@client ~]# curl -i -X HEAD http://192.168.4.5			//报错
+
+
+*************************************************************************
+
+
+2.5防止buffer溢出
+当客户端连接服务器时，服务器会启用各种缓存，用来存放连接的状态信息。
+如果攻击者发送大量的连接请求，而服务器不对缓存做限制的话，内存数据就有可能溢出（空间不足）。
+修改Nginx配置文件，调整各种buffer参数，可以有效降低溢出风险。
+
+vim /usr/local/nginx/conf/nginx.conf
+http{
+client_body_buffer_size  1K;
+client_header_buffer_size 1k;
+client_max_body_size 1k;
+large_client_header_buffers 2 1k;
+ … …
+}
+/usr/local/nginx/sbin/nginx -s reload
+
+
+*****************************************************************************************
+
+数据库服务安全
+
+安装完MariaDB或MySQL后，默认root没有密码，并且提供了一个任何人都可以操作的test测试数据库。有一个名称为mysql_secure_installation的脚本，该脚本可以帮助我们为root设置密码，并禁止root从远程其他主机登陆数据库，并删除测试性数据库test。
+
+[root@proxy ~]# systemctl status mariadb             确保服务已启动 
+[root@proxy ~]# mysql_secure_installation            执行初始化安全脚本
+
+输入root的当前密码                                               Enter current password for root (enter for none): 回车
+设置root用户密码                                                 Set root password? [Y/n] 
+删除匿名用户         					           Remove anonymous users? [Y/n] y
+不允许远程登录本机   						   Disallow root login remotely? [Y/n] y
+删除测试数据库并访问它 					   Remove test database and access to it? [Y/n] y
+立即重新加载特权表 						   Reload privilege tables now? [Y/n] y
+
+2）密码安全
+
+手动修改MariaDB或MySQL数据库密码的方法：
+
+							          方法1:   mysqladmin -uroot -p password '新密码'
+							          方法2:   MariaDB [(none)]> set password for root@"localhost"=password('新密码');
+							          方法3:   MariaDB [(none)]> update mysql.user set password=password("新密码") where
+										           -> host="localhost" and user="root";
+									  MariaDB [(none)]> flush privileges;
+删除记录历史命令的文件
+								 history -c
+								 rm -rf  ~/.bash_history 
+								 rm -rf ~/.mysql_history
+
+3）数据备份与还原
+
+首先，备份数据库（注意用户名为root，密码为redhat）：
+
+mysqldump -uroot -predhat mydb table > table.sql                    备份数据库中的某个数据表
+mysqldump -uroot -predhat mydb > mydb.sql                           备份某个数据库
+mysqldump -uroot -predhat --all-databases > all.sql                 备份所有数据库
+
+接下来，还原数据库（注意用户名为root，密码为redhat）：
+
+mysql -uroot -predhat mydb  < table.sql					还原数据表
+mysql -uroot -predhat mydb  < mydb.sql					还原数据库
+mysql -uroot -predhat < all.sql					      还原所有数据库
+
+4）创建可以远程登陆的账户(用户授权)
+
+MariaDB [(none)]> grant all on *.* to tom@'%' identified by '123';  创建一个新账户tom
+
+5.)使用tcpdump抓包
+
+tcpdump -w log -i eth0 src or dst port 3306       			抓取源或目标端口是3306的数据包，保存到log文件中
+
+6)数据库服务的数据在网络传输是没有加密的
+
+tomcat服务安全
+如果配置起不来,做随机数
+ mv /dev/random /dev/random 
+ ln -s /dev/urandom /dev/random 
+
+1.安装依赖包             yum -y install java-1.8.0-openjdk         
+                        tar -zxvf /root/apache-tomcat-8.0.30.tar.gz   
+                        mv apache-tomcat-8.0.30 /usr/local/tomcat         
+启动服务                 /usr/local/tomcat/bin/startup.sh  
+写入测试网页              echo 123 > /usr/local/tomcat/webapps/ROOT/a.html   
+
+测试                     curl http://127.0.0.1:8080/a.html
+
+2.优化配置
+2.1隐藏版本信息
+
+                          yum -y install java-1.8.0-openjdk-devel
+                          cd /usr/local/tomcat/lib/
+                          jar -xf catalina.jar
+                          vim +16 org/apache/catalina/util/ServerInfo.properties 
+                          //根据自己的需要，修改版本信息的内容
+
+                          server.info=IIS^M
+                          server.number=9.10.32.0^M
+                          server.built=Dec 1 2019 22:30:46 UTC
+
+
+                          vim +69 /usr/local/tomcat/conf/server.xml  修改版本包头信息
+                              <Connector port="8080" protocol="HTTP/1.1"
+                                             connectionTimeout="20000"
+                                             redirectPort="8443" server="Nginx" /> 
+                          在后面追加server="Nginx" ,自定义版本信息
+
+[root@web1 lib]# /usr/local/tomcat/bin/shutdown.sh		//关闭服务
+[root@web1 lib]# /usr/local/tomcat/bin/startup.sh		//启动服务
+
+
+
+3.降权启动:                            useradd tomcat
+                                     chown -R tomcat:tomcat /usr/local/tomcat/
+                                    //修改tomcat目录的权限，让tomcat账户对该目录有操作权限
+                                     su -c /usr/local/tomcat/bin/startup.sh tomcat
+                                    //使用su命令切换为tomcat账户，以tomcat账户的身份启动tomcat服务
+                                     chmod +x /etc/rc.local				//该文件为开机启动文件
+                                     vim /etc/rc.local 					//修改文件，添加如下内容
+                                     su -c /usr/local/tomcat/bin/startup.sh tomcat
+
+ 删除默认的测试页面:                   rm -rf  /usr/local/tomcat/webapps/*
+
+*****************************************************************************************
+
+Linux安全之打补丁
+使用diff和patch工具打补丁
+
+
+ 使用diff命令语法 diff -aruN /demo/source1 /demo/source2
+ 
+-u 输出统一内容的头部信息（打补丁使用），计算机知道是哪个文件需要修改
+-r 递归对比目录中的所有资源（可以对比目录）
+-a 所有文件视为文本（包括二进制程序）
+-N 无文件视为空文件（空文件怎么变成第二个文件）
+
+-N选项备注说明：
+A目录下没有txt文件，B目录下有txt文件
+diff比较两个目录时，默认会提示txt仅在B目录有（无法对比差异，修复文件）
+diff比较时使用N选项，则diff会拿B下的txt与A下的空文件对比，补丁信息会明确
+说明如何从空文件修改后变成txt文件，打补丁即可成功！
+
+yum -y install tree 软件包 显示树形图
+tree /demo/
+/demo/
+├── source1
+│   ├── find
+│   └── test.sh
+└── source2
+    ├── find
+    ├── test.sh
+    └── tmp.txt
+
+
+
+装包         yum -y install patch
+
+使用patch命令对目录下的所有代码打补丁
+
+格式 :patch -p数字 < 补丁文件
+-p数字 删除重复目录的个数
+-p0   没有重复目录
+-p2   删除2个重复目录
+
+打补丁(进入到补丁路径中任意位置)  patch -p1 < /root/soft.patch  cat /tmp/soft.patch 查看补丁所在路径
+
+还原版本(进入到打补丁所在路径)    patch -RE < 补丁文件 撤销
+
+
+******************************************************************************
+
+iptables防火墙
+
+RHEL7 firewalld  
+RHEL6 iptables
+RHEL5 iptables
+
+
+
+
+安装iptables防火墙软件     yum -y install iptables-services.x86_64                   
+                         systemctl start iptables.service
+                         systemctl enable iptables.service 
+
+
+
+
+iptables防火墙服务的组成  4张表 5条链
+
+表是iptables防火墙服务功能分类
+1）iptables的4个表（区分大小写）：
+raw    状态跟踪   PREROUTING OUTPUT
+mangle 包标记     PREROUTING     
+nat    地址转换
+filter 过滤表(默认表)
+
+2）iptables的5个链（区分大小写）：
+链是匹配ip数据包传输的方向
+INPUT进入防火墙主机的包
+OUTPUT从防火墙主机出去的包
+FORWARD从防火墙经过的包
+PREROUTING 路由前处理
+POSTROUTING路由后处理
+
+
+iptables命令的基本使用方法 
+iptables  [-t 表名]  选项  [链名]  [条件]  [-j 目标操作]
+
+表名                 选项                           链名                    条件           目标操作：
+raw    状态跟踪     -L : 查看所有规则                 INPUT进入防火墙主机的包   -p: 协议名     ACCEPT：允许通过/放行
+mangle 包标记      -A :追加一条防火墙规则至链的末尾位置  OUTPUT从防火墙主机出去的包-i:收数据的网卡 DROP：直接丢弃，不给出任何回应
+nat    地址转换选项 -I :插入一条防火墙规则至链的开头     FORWARD从防火墙经过的包 -o:发数据的网卡   REJECT：拒绝通过，必要时会给出提示
+filter 过滤表(默认表)-D :删除指定一条规则             PREROUTING 路由前处理  --sport:源端口    LOG：记录日志，然后传给下一条规则
+                  -F :清空所有规则                  POSTROUTING路由后处理  --dport:目标端口
+		--line-numbles:查看规则时,显示规则的行号                       -s:源地址
+                  -P:设置默认规则                                             -d:目标地址
+                                                                         --icmp-type[请求echo-request/回应echo-reply]
+iptables -t filter -A INPUT -p tcp --dport 22 -j ACCEPT                           
+iptables -t filter -P INPUT DROP
+iptables -t filter -I INPUT -p tcp --drop 80 -s 192.168.4.0/24 -j ACCEPT
+
+
+
+
+
+
+//注意事项与规律：
+//可以不指定表，默认为filter表
+//可以不指定链，默认为对应表的所有链
+//如果没有找到匹配条件，则执行防火墙默认规则
+//选项/链名/目标操作用大写字母，其余都小写
+
+
+选项 
+-L : 查看所有规则
+-A :追加一条防火墙规则至链的末尾位置
+-I :插入一条防火墙规则至链的开头
+-D :删除指定一条规则
+-F :清空所有规则
+--line-numbles:查看规则时,显
+示规则的行号   
+
+条件(规则) 
+-p: 协议名
+-i:收数据的网卡
+-o:发数据的网卡
+--sport:源端口 
+--dport:目标端口
+-s:源地址
+-d:目标地址
+--icmp-type ICMP类型[请求echo-request/回应echo-reply]
+
+
+指定条件的选项
+条件的匹配顺序:顺序比对,匹配即停止(LOG除外)
+若无任何匹配,则按该链的默认策略处理
+
+目标操作：
+ACCEPT：允许通过/放行
+DROP：直接丢弃，不给出任何回应
+REJECT：拒绝通过，必要时会给出提示
+LOG：记录日志，然后传给下一条规则
+
+保存规则,永久有效        iptables-save > /etc/sysconfig/iptables
+
+自定义防火墙规则
+主机型防火墙:写防火墙规则保护本机(filter-->INPUT)
+iptables -t filter -A INPUT -p tcp --dport 22 -j ACCEPT                           
+
+iptables -t filter -P INPUT DROP
+
+iptables -t filter -I INPUT -p tcp --drop 80 -s 192.168.4.0/24 -j ACCEPT
+
+iptables -t filter -A INPUT -p icmp -j ACCEPT
+
+**********************************************************************************
+
+网络型防火墙:保护私网,写防火墙规则限制数据包的经过(filter-->FORWORD)
+
+liunx 系统
+开启路由转发功能  echo 1 > /proc/sys/net/ipv4/ip_forward 1开启路由转发功能
+               echo 'net.ipv4.ip_forward = 1' >> /etc/sysctl.conf 
+               sysctl -p   查看路由转发功能是否为1
+
+查看网关         route -n
+添加网关         route add default gw 192.168.2.51
+删除网关         route del default gw 网关
+
+防火墙禁止路由转发功能 iptables -t filter -P FORWARD DROP
+
+有去 iptables -t filter -A FORWARD -p tcp --dport 80 -j ACCEPT
+有回 iptables -t filter -A FORWARD -p tcp --sport 80 -j ACCEPT
+
+开启ssh功能   iptables -t filter -A FORWARD -p  tcp --dport 22 -j ACCEPT
+             iptables -t filter -A FORWARD -p  tcp --sport 22 -j ACCEPT
+
+********************************************************************************************
+
+扩展匹配
+前提条件 有对应的防火墙模块支持
+基本用法: -m 扩展条件 条件值
+类别          选项                        用法
+         MAC地址匹配              -m mac -mac-source  MAC地址
+                                        
+                                 -m multiport --sports  源端口列表
+扩展匹配  多端口匹配                -m multiport --dports  目标端口列表
+                                 -m iprange --src-range IP1-IP2
+         IP范围匹配                -m iprange --dst-range IP1-IP2
+
+使用模块扩展一次性指定多个端口:      iptables -t filter -A FORWARD -p tcp -m multiport --sports 22,80 -j ACCEPT
+				iptables -t filter -A FORWARD -p tcp -m multiport --dports 22,80 -j ACCEPT
+
+禁止来自某个地址的ping  iptables -t filter -A FORWARD -p icmp -m iprange --src-range 192.168.2.50-192.168.2.60 -j REJECT
+禁止来自MAC地址的ping  iptables -t filter -I FORWARD 3 -p icmp -m mac --mac-source 52:54:00:05:39:31 -j DROP
+ 
+查看经过自己的机器的MAC地址: arp -a 
+
+*********************************************************************************************************
+
+
+nat表的使用 (使用nat表做数据包中原地址转换 实现所有主机共享一个公网ip地址上网)
+
+SNAT 源地址转换 
+公网地址固定时:                       iptables -t nat -A POSTROUTING -s 192.168.2.0/24 -p tcp --dport 80 
+                                    -j SNAT --to-source 192.168.4.51
+
+公网地址是服务商动态分配的,定义防火墙规则:iptables -t nat -A POSTROUTING -s 192.168.2.0/24 -p tcp --dport 80 
+                                    -o eth0 -j  MASQUERADE
