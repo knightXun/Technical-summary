@@ -350,8 +350,8 @@ Nginx采用轮询的方式调用后端SSH服务器
 [root@proxy ~]# tar  -xf   nginx-1.12.2.tar.gz
 [root@proxy ~]# cd  nginx-1.12.2
 [root@proxy nginx-1.12.2]# ./configure   \
-> --with-http_ssl_module                                //开启SSL加密功能
-> --with-stream                                       //开启4层反向代理功能
+> --with-http_ssl_module                                  //开启SSL加密功能
+> --with-stream                                           //开启4层反向代理功能
 [root@proxy nginx-1.12.2]# make && make install           //编译并安装
 步骤二：配置Nginx服务器，添加服务器池，实现TCP/UDP反向代理功能
 
@@ -363,7 +363,7 @@ stream {
                server 192.168.2.200:22;
 }
             server {
-                listen 12345;                    //Nginx监听的端口
+                listen 12345;                     //Nginx监听的端口
                 proxy_connect_timeout 1s;         //连接的超时时间，可选配置
                 proxy_timeout 3s;
                  proxy_pass backend;
@@ -400,12 +400,12 @@ http {
 步骤一：自定义报错页面
 
 1）优化前，客户端使用浏览器访问不存在的页面，会提示404文件未找到
-[root@client ~]# firefox http://192.168.4.5/xxxxx        //访问一个不存在的页面
+[root@client ~]# firefox http://192.168.4.5/xxxxx         //访问一个不存在的页面
 2）修改Nginx配置文件，自定义报错页面
 [root@proxy ~]# vim /usr/local/nginx/conf/nginx.conf
 .. ..
-        charset utf-8;                    //仅需要中文时需要改选项，可选项
-error_page   404  /404.html;    //自定义错误页面
+        charset utf-8;                                    //仅需要中文时需要改选项，可选项
+error_page   404  /404.html;                              //自定义错误页面
 .. ..
 [root@proxy ~]# vim /usr/local/nginx/html/404.html        //生成错误页面
 Oops,No NO no page …
@@ -420,14 +420,14 @@ Oops,No NO no page …
 
 步骤二：如何查看服务器状态信息（非常重要的功能）
 
-1）编译安装时使用--with-http_stub_status_module开启状态页面模块
+1）编译安装时使用--with-http_stub_status_module               开启状态页面模块
 [root@proxy ~]# tar  -zxvf   nginx-1.12.2.tar.gz
 [root@proxy ~]# cd  nginx-1.12.2
 [root@proxy nginx-1.12.2]# ./configure   \
-> --with-http_ssl_module                        //开启SSL加密功能
-> --with-stream                                //开启TCP/UDP代理模块
-> --with-http_stub_status_module                //开启status状态页面
-[root@proxy nginx-1.12.2]# make && make install    //编译并安装
+> --with-http_ssl_module                                 //开启SSL加密功能
+> --with-stream                                         //开启TCP/UDP代理模块
+> --with-http_stub_status_module                        //开启status状态页面
+[root@proxy nginx-1.12.2]# make && make install          //编译并安装
 2）启用Nginx服务并查看监听端口状态
 ss命令可以查看系统中启动的端口信息，该命令常用选项如下：
 -a显示所有端口的信息
@@ -474,9 +474,9 @@ socket: Too many open files (24)                //提示打开文件数量过多
 2）修改Nginx配置文件，增加并发量
 [root@proxy ~]# vim /usr/local/nginx/conf/nginx.conf
 .. ..
-worker_processes  2;                    //与CPU核心数量一致
+worker_processes  2;                             //与CPU核心数量一致
 events {
-worker_connections 65535;        //每个worker最大并发连接数
+worker_connections 65535;                        //每个worker最大并发连接数
 }
 .. ..
 [root@proxy ~]# nginx -s reload
@@ -581,9 +581,9 @@ kill -USR1 $(cat $logpath/nginx.pid)
 [root@proxy ~]# cat /usr/local/nginx/conf/nginx.conf
 http {
 .. ..
-gzip on;                            //开启压缩
+gzip on;                             //开启压缩
 gzip_min_length 1000;                //小文件不压缩
-gzip_comp_level 4;                //压缩比率
+gzip_comp_level 4;                   //压缩比率
 gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript;
                                     //对特定文件压缩，类型参考mime.types
 .. ..
@@ -592,10 +592,10 @@ gzip_types text/plain text/css application/json application/x-javascript text/xm
 
 1）如果需要处理大量静态文件，可以将文件缓存在内存，下次访问会更快。
 http { 
-open_file_cache          max=2000  inactive=20s;
-        open_file_cache_valid    60s;
-        open_file_cache_min_uses 5;
-        open_file_cache_errors   off;
+            open_file_cache          max=2000  inactive=20s;
+            open_file_cache_valid    60s;
+            open_file_cache_min_uses 5;
+            open_file_cache_errors   off;
 //设置服务器最大缓存2000个文件句柄，关闭20秒内无请求的文件句柄
 //文件句柄的有效时间是60秒，60秒后过期
 //只有访问次数超过5次会被缓存
@@ -603,8 +603,6 @@ open_file_cache          max=2000  inactive=20s;
 
 
 
-Top
-NSD Operation DAY01
 
 案例1：搭建Nginx服务器
 案例2：用户认证
@@ -777,22 +775,22 @@ Adding password for user jerry
 [root@proxy ~]# vim /usr/local/nginx/conf/nginx.conf
 .. ..
 server {
-        listen       80;                                      //端口
+        listen       80;                                       //端口
         server_name  www.a.com;                                //域名
-auth_basic "Input Password:";                        //认证提示符
-        auth_basic_user_file "/usr/local/nginx/pass";        //认证密码文件
+auth_basic "Input Password:";                                  //认证提示符
+        auth_basic_user_file "/usr/local/nginx/pass";          //认证密码文件
 location / {
-            root   html;                                    //指定网站根路径
+            root   html;                                       //指定网站根路径
             index  index.html index.htm;
        }
        
 }
 … …
     server {
-        listen  80;                                        //端口
+        listen  80;                                            //端口
         server_name  www.b.com;                                //域名
 location / { 
-root   www;                                 //指定网站根路径
+root   www;                                                   //指定网站根路径
 index  index.html index.htm;
 }
 }
@@ -817,19 +815,19 @@ index  index.html index.htm;
 
 1.基于端口的虚拟主机（参考模板）
 server {
-        listen       8080;                        //端口
-        server_name  web1.example.com;          //域名
+        listen       8080;                          //端口
+        server_name  web1.example.com;              //域名
         ......
 }
     server {
         listen       8000;                         //端口
-        server_name  web1.example.com;           //域名
+        server_name  web1.example.com;             //域名
       .......
 }
 2.基于IP的虚拟主机（参考模板）
 server {
         listen       192.168.0.1:80;              //IP地址与端口
-        server_name  web1.example.com;          //域名
+        server_name  web1.example.com;            //域名
   ... ...
 }
     server {
