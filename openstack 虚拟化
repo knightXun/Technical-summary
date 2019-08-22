@@ -434,7 +434,7 @@ opensatck is not onstorage BLOCK ....
 17)无可用端口    
 18)主机ping不通浮动ip    1.是否关联浮动ip,关联后刷新即可
 19)删除网络失败在哪个用户上面创建的就在那删除;从右往左删
-20)创建角色失败 ERROE:...openstack role list... 查看mysql redis mongodb rabbi
+20)创建角色失败 ERROE:...openstack role list... 查看mysql redis mongodb rabbitmp是否启动
 
 
 
