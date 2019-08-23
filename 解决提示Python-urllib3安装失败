@@ -1,0 +1,29 @@
+
+
+CentOS7安装Certbot解决提示Python-urllib3安装失败
+
+Certbot是一个部署Let’s Encrypt证书的客户端（Let’s Encrypt是一个证书发布机构CA，Let’s Encrypt支持域名加密，即为域名启用https）。
+
+Certbot能够自动的在Web服务器（Apache，Nginx等）上部署从Let’s Encrypt获取的证书，非常简单易用。
+
+Certbot提供了为特定系统和特定服务器安装Certbot的简便方法，使用Certbot提供的为CentOS7系统Apache服务器安装Certbot时，提示：
+
+安装失败
+
+python-urllib3.nonarch 0:1.10.2-2.el7_1
+1、安装失败的原因：
+
+那是因为在安装Python时，你已经在系统中安装了urllib3包，而且安装的版本高于1.10。
+
+2、解决方法：
+
+卸载已经安装的Python的urllib3包
+
+pip uninstall urllib3
+然后就能够成功安装python-urllib3软件包
+
+3、运行certbot命令提示urllib3版本低
+
+如果你成功安装了python-urllib3软件包，在运行certbot命令时提示urllib3版本太低，可以使用pip命令升级urllib3包：
+
+pip install --upgrade urllib3
