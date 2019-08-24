@@ -1,7 +1,7 @@
 
 
 
-pxc
+PXC
 
 案例1：安装软件
 案例2：配置服务
@@ -55,46 +55,16 @@ PING pxcnode71 (192.168.4.71) 56(84) bytes of data.
 --- pxcnode71 ping statistics ---
 2 packets transmitted, 2 received, 0% packet loss, time 999ms
 rtt min/avg/max/mdev = 0.011/0.015/0.020/0.006 ms
-[root@host71 ~]# 
-[root@host71 ~]# 
-[root@host71 ~]# ping -c 2  pxcnode72 //成功
-PING pxcnode72 (192.168.4.72) 56(84) bytes of data.
-64 bytes from pxcnode72 (192.168.4.72): icmp_seq=1 ttl=255 time=0.113 ms
-64 bytes from pxcnode72 (192.168.4.72): icmp_seq=2 ttl=255 time=0.170 ms
---- pxcnode72 ping statistics ---
-2 packets transmitted, 2 received, 0% packet loss, time 1000ms
-rtt min/avg/max/mdev = 0.113/0.141/0.170/0.030 ms
-[root@host71 ~]# 
-[root@host71 ~]# 
-[root@host71 ~]# ping -c 2  pxcnode73 //成功
-PING pxcnode73 (192.168.4.73) 56(84) bytes of data.
-64 bytes from pxcnode73 (192.168.4.73): icmp_seq=1 ttl=255 time=0.198 ms
-64 bytes from pxcnode73 (192.168.4.73): icmp_seq=2 ttl=255 time=0.155 ms
---- pxcnode73 ping statistics ---
-2 packets transmitted, 2 received, 0% packet loss, time 1000ms
-rtt min/avg/max/mdev = 0.155/0.176/0.198/0.025 ms
-[root@host71 ~]#
+
 步骤二：安装软件包
 
-1）在192.168.4.71 服务器安装软件包
-软件包之间有依赖注意软件包安装顺序
-]# rpm -ivh libev-4.15-1.el6.rf.x86_64.rpm    //安装依赖
+1）在三台 服务器安装软件包
+]# rpm -ivh libev-4.15-1.el6.rf.x86_64.rpm                               //安装依赖
 ]# yum  -y  install  percona-xtrabackup-24-2.4.13-1.el7.x86_64.rpm
- ]# rpm -ivh qpress-1.1-14.11.x86_64.rpm     //安装依赖
- ]# tar -xvf  Percona-XtraDB-Cluster-5.7.25-31.35-r463-el7-x86_64-bundle.tar
- ]# 
-2）在192.168.4.72 服务器安yum -y  install  Percona-XtraDB-Cluster-*.rpm装软件包
-]# rpm -ivh libev-4.15-1.el6.rf.x86_64.rpm    //安装依赖
-]# yum  -y  install  percona-xtrabackup-24-2.4.13-1.el7.x86_64.rpm
-]# rpm -ivh qpress-1.1-14.11.x86_64.rpm     //安装依赖
+]# rpm -ivh qpress-1.1-14.11.x86_64.rpm                                  //安装依赖
 ]# tar -xvf  Percona-XtraDB-Cluster-5.7.25-31.35-r463-el7-x86_64-bundle.tar
 ]# yum -y  install  Percona-XtraDB-Cluster-*.rpm
-3）在192.168.4.73 服务器安装软件包
-]# rpm -ivh libev-4.15-1.el6.rf.x86_64.rpm    //安装依赖
-]# yum  -y  install  percona-xtrabackup-24-2.4.13-1.el7.x86_64.rpm
-]# rpm -ivh qpress-1.1-14.11.x86_64.rpm     //安装依赖
-]# tar -xvf  Percona-XtraDB-Cluster-5.7.25-31.35-r463-el7-x86_64-bundle.tar
-]# yum -y  install  Percona-XtraDB-Cluster-*.rpm
+
 2 案例2：配置服务
 2.1 问题
 
@@ -105,7 +75,8 @@ rtt min/avg/max/mdev = 0.155/0.176/0.198/0.025 ms
 2.2 步骤
 
 实现此案例需要按照如下步骤进行。
-步骤一：修改mysqld.cnf文件
+
+步骤一：分别修改3台服务器的mysqld.cnf文件
 
 [root@pxcnode71 ~]# vim /etc/percona-xtradb-cluster.conf.d/mysqld.cnf
 [mysqld]
@@ -119,29 +90,7 @@ log_slave_updates                        //启用链式复制
 expire_logs_days=7                       //日志文件保留天数
 :wq
 修改服务器192.168.4.72
-[root@pxcnode72 ~]# vim /etc/percona-xtradb-cluster.conf.d/mysqld.cnf
-[mysqld]
-server-id=72                             //server-id 不允许重复
-datadir=/var/lib/mysql                   //数据库目录
-socket=/var/lib/mysql/mysql.sock         //socket文件
-log-error=/var/log/mysqld.log            //日志文件
-pid-file=/var/run/mysqld/mysqld.pid      //pid文件
-log-bin                                  //启用binlog日志
-log_slave_updates                        //启用链式复制
-expire_logs_days=7                       //日志文件保留天数
-:wq
-修改服务器192.168.4.73
-[root@pxcnode73 ~]# vim /etc/percona-xtradb-cluster.conf.d/mysqld.cnf
-[mysqld]
-server-id=73                             //server-id 不允许重复
-datadir=/var/lib/mysql                   //数据库目录
-socket=/var/lib/mysql/mysql.sock         //socket文件
-log-error=/var/log/mysqld.log            //日志文件
-pid-file=/var/run/mysqld/mysqld.pid      //pid文件
-log-bin                                  //启用binlog日志
-log_slave_updates                        //启用链式复制
-expire_logs_days=7                       //日志文件保留天数
-:wq 
+
 步骤二：修改mysqld_safe.cnf文件
 
 1）分别修改3台服务器的mysqld_safe.cnf （使用默认配置即可）
@@ -151,20 +100,7 @@ pid-file = /var/run/mysqld/mysqld.pid
 socket   = /var/lib/mysql/mysql.sock
 nice     = 0
 :wq
-修改服务器192.168.4.72
-[root@pxcnode72 ~]# vim /etc/percona-xtradb-cluster.conf.d/mysqld_safe.cnf
-[mysqld_safe]
-pid-file = /var/run/mysqld/mysqld.pid
-socket   = /var/lib/mysql/mysql.sock
-nice     = 0
-:wq
-修改服务器192.168.4.73
-[root@pxcnode73 ~]# vim /etc/percona-xtradb-cluster.conf.d/mysqld_safe.cnf
-[mysqld_safe]
-pid-file = /var/run/mysqld/mysqld.pid
-socket   = /var/lib/mysql/mysql.sock
-nice     = 0
-:wq
+
 步骤三：修改wsrep.cnf文件
 
 1）分别修改3台服务器的wsrep.cnf
@@ -175,22 +111,7 @@ nice     = 0
 30行 rep_node_name=pxcnode71                                               //本机主机名
 39行 wsrep_sst_auth="sstuser:123qqq...A"                                   //SST数据同步授权用户及密码
 :wq
-修改服务器192.168.4.72
-[root@pxcnode72 ~]# vim /etc/percona-xtradb-cluster.conf.d/wsrep.cnf
-wsrep_cluster_address=gcomm://192.168.4.71,192.168.4.72,192.168.4.73//成员列表
-wsrep_node_address=192.168.4.72 //本机ip
-wsrep_cluster_name=pxc-cluster //集群名
-wsrep_node_name=pxcnode72 //本机主机名
-wsrep_sst_auth="sstuser:123qqq...A" //SST数据同步授权用户及密码
-:wq
-修改服务器192.168.4.73
-[root@pxcnode73 ~]# vim /etc/percona-xtradb-cluster.conf.d/wsrep.cnf
-wsrep_cluster_address=gcomm://192.168.4.71,192.168.4.72,192.168.4.73//成员列表
-wsrep_node_address=192.168.4.73 //本机ip
-wsrep_cluster_name=pxc-cluster //集群名
-wsrep_node_name=pxcnode73 //本机主机名
-wsrep_sst_auth="sstuser:123qqq...A" //SST数据同步授权用户及密码
-:wq
+
 步骤四：启动服务
 
 1）启动集群服务
@@ -202,10 +123,10 @@ wsrep_sst_auth="sstuser:123qqq...A" //SST数据同步授权用户及密码
 Mysql> alter user  root@”localhost” identified by “123456”;        //修改登录密码
 MySQL> exit;
 [root@pxcnode71 ~]#mysql –uroot –p123456                           //使用修改后的密码登录
-Mysql> garnt reload, lock tables,replication client,process on *.*  to
+Mysql> grant reload, lock tables,replication client,process on *.*  to
 sstuser@"localhost” identified by  “123qqq…A”;                     //添加授权用户
 2）启动数据库服务
-启动主机pxcnode72的数据库服务，会自动同步pxcnode71主机的root初始密码和授权用户sstuser
+启动主机pxcnode72,73的数据库服务，会自动同步pxcnode71主机的root初始密码和授权用户sstuser
 [root@pxcnode72 ~]# systemctl  start mysql                         //启动数据库服务
 [root@pxcnode72 ~]#
 [root@pxcnode72 ~]# netstat -utnlp  | grep :3306
@@ -213,14 +134,7 @@ tcp6       0      0 :::3306                 :::*                    LISTEN      
 [root@pxcnode72 ~]# netstat -utnlp  | grep :4567
 tcp        0      0 0.0.0.0:4567            0.0.0.0:*               LISTEN      12794/mysqld        
 [root@host72 ~]#
-启动主机pxcnode73的数据库服务，会自动同步pxcnode71主机的root初始密码和授权用户sstuser
-[root@pxcnode73 ~]# systemctl  start mysql                        //启动数据库服务
-[root@pxcnode73 ~]#
-[root@pxcnode73 ~]# netstat -utnlp  | grep :3306
-tcp6       0      0 :::3306                 :::*                    LISTEN      12794/mysqld        
-[root@pxcnode73 ~]# netstat -utnlp  | grep :4567
-tcp        0      0 0.0.0.0:4567            0.0.0.0:*               LISTEN      12794/mysqld        
-[root@host73 ~]#
+
 3 案例3：测试配置
 3.1 问题
 
@@ -235,11 +149,12 @@ tcp        0      0 0.0.0.0:4567            0.0.0.0:*               LISTEN      
 1）启动数据库服务
 在任意一台数据查看都可以。
 [root@pxcnode71 ~]# mysql -uroot -p123456
+mysql> show status like "%wsrep%";                                             //查看集群状态
 wsrep_incoming_addresses 192.168.4.71:3306,192.168.4.72:3306,192.168.4.73:3306 //集群成员列表 
-wsrep_cluster_size       3 //集群服务器台数
-wsrep_cluster_status   Primary     //集群状态                           
-wsrep_connected        ON            //连接状态
-wsrep_ready             ON           //服务状态
+wsrep_cluster_size       3                                                     //集群服务器台数
+wsrep_cluster_status   Primary                                                 //集群状态                           
+wsrep_connected        ON                                                      //连接状态
+wsrep_ready             ON                                                     //服务状态
 步骤二：访问集群，存取数据
 
 1）添加访问数据的连接用户 （在任意一台服务器上添加都可以，另外的2台服务器会自动同步授权用户）
