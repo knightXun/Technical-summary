@@ -1,5 +1,7 @@
-Top
-NSD RDBMS2 DAY05
+
+
+
+pxc
 
 案例1：安装软件
 案例2：配置服务
@@ -80,8 +82,8 @@ rtt min/avg/max/mdev = 0.155/0.176/0.198/0.025 ms
 ]# yum  -y  install  percona-xtrabackup-24-2.4.13-1.el7.x86_64.rpm
  ]# rpm -ivh qpress-1.1-14.11.x86_64.rpm     //安装依赖
  ]# tar -xvf  Percona-XtraDB-Cluster-5.7.25-31.35-r463-el7-x86_64-bundle.tar
- ]# yum -y  install  Percona-XtraDB-Cluster-*.rpm
-2）在192.168.4.72 服务器安装软件包
+ ]# 
+2）在192.168.4.72 服务器安yum -y  install  Percona-XtraDB-Cluster-*.rpm装软件包
 ]# rpm -ivh libev-4.15-1.el6.rf.x86_64.rpm    //安装依赖
 ]# yum  -y  install  percona-xtrabackup-24-2.4.13-1.el7.x86_64.rpm
 ]# rpm -ivh qpress-1.1-14.11.x86_64.rpm     //安装依赖
@@ -107,39 +109,39 @@ rtt min/avg/max/mdev = 0.155/0.176/0.198/0.025 ms
 
 [root@pxcnode71 ~]# vim /etc/percona-xtradb-cluster.conf.d/mysqld.cnf
 [mysqld]
-server-id=71                      //server-id 不允许重复
-datadir=/var/lib/mysql                  //数据库目录
+server-id=71                             //server-id 不允许重复
+datadir=/var/lib/mysql                   //数据库目录
 socket=/var/lib/mysql/mysql.sock         //socket文件
-log-error=/var/log/mysqld.log        //日志文件
-pid-file=/var/run/mysqld/mysqld.pid    //pid文件
-log-bin                    //启用binlog日志
-log_slave_updates            //启用链式复制
-expire_logs_days=7            //日志文件保留天数
+log-error=/var/log/mysqld.log            //日志文件
+pid-file=/var/run/mysqld/mysqld.pid      //pid文件
+log-bin                                  //启用binlog日志
+log_slave_updates                        //启用链式复制
+expire_logs_days=7                       //日志文件保留天数
 :wq
 修改服务器192.168.4.72
 [root@pxcnode72 ~]# vim /etc/percona-xtradb-cluster.conf.d/mysqld.cnf
 [mysqld]
-server-id=72                      //server-id 不允许重复
-datadir=/var/lib/mysql                  //数据库目录
+server-id=72                             //server-id 不允许重复
+datadir=/var/lib/mysql                   //数据库目录
 socket=/var/lib/mysql/mysql.sock         //socket文件
-log-error=/var/log/mysqld.log        //日志文件
-pid-file=/var/run/mysqld/mysqld.pid    //pid文件
-log-bin                    //启用binlog日志
-log_slave_updates            //启用链式复制
-expire_logs_days=7            //日志文件保留天数
+log-error=/var/log/mysqld.log            //日志文件
+pid-file=/var/run/mysqld/mysqld.pid      //pid文件
+log-bin                                  //启用binlog日志
+log_slave_updates                        //启用链式复制
+expire_logs_days=7                       //日志文件保留天数
 :wq
 修改服务器192.168.4.73
 [root@pxcnode73 ~]# vim /etc/percona-xtradb-cluster.conf.d/mysqld.cnf
 [mysqld]
-server-id=73                      //server-id 不允许重复
-datadir=/var/lib/mysql                  //数据库目录
+server-id=73                             //server-id 不允许重复
+datadir=/var/lib/mysql                   //数据库目录
 socket=/var/lib/mysql/mysql.sock         //socket文件
-log-error=/var/log/mysqld.log        //日志文件
-pid-file=/var/run/mysqld/mysqld.pid    //pid文件
-log-bin                    //启用binlog日志
-log_slave_updates            //启用链式复制
-expire_logs_days=7            //日志文件保留天数
-:wq
+log-error=/var/log/mysqld.log            //日志文件
+pid-file=/var/run/mysqld/mysqld.pid      //pid文件
+log-bin                                  //启用binlog日志
+log_slave_updates                        //启用链式复制
+expire_logs_days=7                       //日志文件保留天数
+:wq 
 步骤二：修改mysqld_safe.cnf文件
 
 1）分别修改3台服务器的mysqld_safe.cnf （使用默认配置即可）
@@ -166,15 +168,15 @@ nice     = 0
 步骤三：修改wsrep.cnf文件
 
 1）分别修改3台服务器的wsrep.cnf
-[root@pxcnode71 ~]# vim /etc/percona-xtradb-cluster.conf.d/mysqld_safe.cnf
-wsrep_cluster_address=gcomm://192.168.4.71,192.168.4.72,192.168.4.73//成员列表
-wsrep_node_address=192.168.4.71 //本机ip
-wsrep_cluster_name=pxc-cluster //集群名
-wsrep_node_name=pxcnode71 //本机主机名
-wsrep_sst_auth="sstuser:123qqq...A" //SST数据同步授权用户及密码
+[root@pxcnode71 ~]# vim /etc/percona-xtradb-cluster.conf.d/wsrep.cnf
+8行  wsrep_cluster_address=gcomm://192.168.4.71,192.168.4.72,192.168.4.73  //成员列表
+25行 wsrep_node_address=192.168.4.71                                       //本机ip
+27行 wsrep_cluster_name=pxc-cluster                                        //集群名
+30行 rep_node_name=pxcnode71                                               //本机主机名
+39行 wsrep_sst_auth="sstuser:123qqq...A"                                   //SST数据同步授权用户及密码
 :wq
 修改服务器192.168.4.72
-[root@pxcnode72 ~]# vim /etc/percona-xtradb-cluster.conf.d/mysqld_safe.cnf
+[root@pxcnode72 ~]# vim /etc/percona-xtradb-cluster.conf.d/wsrep.cnf
 wsrep_cluster_address=gcomm://192.168.4.71,192.168.4.72,192.168.4.73//成员列表
 wsrep_node_address=192.168.4.72 //本机ip
 wsrep_cluster_name=pxc-cluster //集群名
@@ -182,7 +184,7 @@ wsrep_node_name=pxcnode72 //本机主机名
 wsrep_sst_auth="sstuser:123qqq...A" //SST数据同步授权用户及密码
 :wq
 修改服务器192.168.4.73
-[root@pxcnode73 ~]# vim /etc/percona-xtradb-cluster.conf.d/mysqld_safe.cnf
+[root@pxcnode73 ~]# vim /etc/percona-xtradb-cluster.conf.d/wsrep.cnf
 wsrep_cluster_address=gcomm://192.168.4.71,192.168.4.72,192.168.4.73//成员列表
 wsrep_node_address=192.168.4.73 //本机ip
 wsrep_cluster_name=pxc-cluster //集群名
@@ -193,18 +195,18 @@ wsrep_sst_auth="sstuser:123qqq...A" //SST数据同步授权用户及密码
 
 1）启动集群服务
 注意：在1台服务器上执行即可(192.168.4.71)，首次启动服务时间比较长
-[root@pxcnode71 ~]# ]# systemctl  start mysql@bootstrap.service  //启动集群服务
-[root@pxcnode71 ~]# grep pass /var/log/mysqld.log     //查看数据库管理员初始登录密码
+[root@pxcnode71 ~]# ]# systemctl  start mysql@bootstrap.service    //启动集群服务
+[root@pxcnode71 ~]# grep pass /var/log/mysqld.log                  //查看数据库管理员初始登录密码
 2019-06-20T12:29:42.489377Z 1 [Note] A temporary password is generated for root@localhost: W.HiOb8(ok)_
-[root@pxcnode71 ~]#mysql –uroot –p’ W.HiOb8(ok)_’ //使用初始密码登录
-Mysql> alter user  root@”localhost” identified by “123456”;//修改登录密码
+[root@pxcnode71 ~]#mysql –uroot –p’ W.HiOb8(ok)_’                  //使用初始密码登录
+Mysql> alter user  root@”localhost” identified by “123456”;        //修改登录密码
 MySQL> exit;
-[root@pxcnode71 ~]#mysql –uroot –p123456 //使用修改后的密码登录
+[root@pxcnode71 ~]#mysql –uroot –p123456                           //使用修改后的密码登录
 Mysql> garnt reload, lock tables,replication client,process on *.*  to
-sstuser@"localhost” identified by  “123qqq…A”; //添加授权用户
+sstuser@"localhost” identified by  “123qqq…A”;                     //添加授权用户
 2）启动数据库服务
 启动主机pxcnode72的数据库服务，会自动同步pxcnode71主机的root初始密码和授权用户sstuser
-[root@pxcnode72 ~]# systemctl  start mysql  //启动数据库服务
+[root@pxcnode72 ~]# systemctl  start mysql                         //启动数据库服务
 [root@pxcnode72 ~]#
 [root@pxcnode72 ~]# netstat -utnlp  | grep :3306
 tcp6       0      0 :::3306                 :::*                    LISTEN      12794/mysqld        
@@ -212,7 +214,7 @@ tcp6       0      0 :::3306                 :::*                    LISTEN      
 tcp        0      0 0.0.0.0:4567            0.0.0.0:*               LISTEN      12794/mysqld        
 [root@host72 ~]#
 启动主机pxcnode73的数据库服务，会自动同步pxcnode71主机的root初始密码和授权用户sstuser
-[root@pxcnode73 ~]# systemctl  start mysql  //启动数据库服务
+[root@pxcnode73 ~]# systemctl  start mysql                        //启动数据库服务
 [root@pxcnode73 ~]#
 [root@pxcnode73 ~]# netstat -utnlp  | grep :3306
 tcp6       0      0 :::3306                 :::*                    LISTEN      12794/mysqld        
