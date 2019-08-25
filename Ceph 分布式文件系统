@@ -87,6 +87,8 @@ do
      scp /etc/chrony.conf $i:/etc/
      ssh  $i  "systemctl restart chronyd"
 done
+
+检测时间同步 chronyc  sources
 步骤三：准备存储磁盘
 
 物理机上为每个虚拟机准备3块20G磁盘（可以使用命令，也可以使用图形直接添加）。
