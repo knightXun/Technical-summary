@@ -24,3 +24,4 @@ server 服务器域名  iburst                     指定服务端位置
 systemctl  restart chronyd 
 systemctl  enable chronyd                   开机自启动
 
+chronyc  sources                            检测时间同步
