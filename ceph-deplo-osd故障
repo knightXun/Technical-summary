@@ -1,0 +1,71 @@
+ceph-deploy:Couldnotfindkeyringfile:/var/lib/ceph/mon/ceph-ceph01/keyring
+
+2017-08-10 09:51:53          来源：kong62‘s Blog   收藏   我要投稿
+今天一个osd故障，准备将该osd重新格式化并作为新osd添加，执行到准备磁盘阶段出错。
+# ceph-deploy osd prepare ceph01:vdc:vdb1
+报错：
+[ceph_deploy][ERROR ] RuntimeError: bootstrap-osd keyring not found; run ‘gatherkeys’
+
+发现原来ceph-deploy目录里面的一些文件被清空了，找不到这些文件了！这些文件包括：
+ceph.bootstrap-mds.keyring
+ceph.bootstrap-osd.keyring
+ceph.bootstrap-rgw.keyring
+ceph.client.admin.keyring
+ceph.mon.keyring
+ceph.conf
+
+解决：
+# ceph-deploy gatherkeys ceph01
+该命令会先找/etc/ceph/ceph.client.admin.keyring，然后再找/var/lib/ceph/bootstrap-osd/ceph.keyring和/var/lib/ceph/bootstrap-mds/ceph.keyring ，/var/lib/ceph/bootstrap-rgw/ceph.keyring
+
+上面命令执行过程报错：
+[ceph_deploy.gatherkeys][WARNIN] Unable to find /var/lib/ceph/mon/ceph-ceph01/keyring on ceph01
+[ceph_deploy][ERROR ] KeyNotFoundError: Could not find keyring file: /var/lib/ceph/mon/ceph-ceph01/keyring on host ceph01
+
+查看该目录确实没有keyring文件
+# ll /var/lib/ceph/mon/ceph-ceph01
+total 4
+-rw-r–r– 1 ceph ceph 0 May 4 18:23 done
+drwxr-xr-x 2 ceph ceph 4096 May 12 10:39 store.db
+-rw-r–r– 1 ceph ceph 0 May 4 18:23 systemd
+
+这个应该是我配置文件里面没有启用验证导致没有keyring文件
+auth_cluster_required = none
+auth_service_required = none
+auth_client_required = none
+auth_supported = none
+
+验证里面也没找到有mon的记录，没辙
+# ceph auth list|grep -i mon
+# ceph auth get mon. -o /tmp/ceph.mon.keyring
+Error ENOENT: failed to find mon. in keyring
+
+先恢复ceph.bootstrap-mds.keyring、ceph.bootstrap-osd.keyring、ceph.bootstrap-rgw.keyring这三个文件：
+# cp /var/lib/ceph/bootstrap-mds/ceph.keyring ceph.bootstrap-mds.keyring
+# cp /var/lib/ceph/bootstrap-osd/ceph.keyring ceph.bootstrap-osd.keyring
+# cp /var/lib/ceph/bootstrap-rgw/ceph.keyring ceph.bootstrap-rgw.keyring
+
+恢复ceph.conf和ceph.client.admin.keyring文件：
+# cp /etc/ceph/ceph.conf ceph.conf
+# cp /etc/ceph/ceph.client.admin.keyring ceph.client.admin.keyring
+
+直接重新生成mon.keyring：
+# ceph-authtool –create-keyring /tmp/ceph.mon.keyring –gen-key -n mon. –cap mon ‘allow *’
+# cp /tmp/ceph.mon.keyring /var/lib/ceph/mon/ceph-ceph01/keyring
+
+再次执行gatherkeys
+# ceph-deploy gatherkeys ceph01
+ceph.mon.keyring妥妥的出来了
+
+再次执行prepare
+# ceph-deploy osd prepare ceph01:vdc:vdb1
+
+报错：
+[ceph_deploy.osd][ERROR ] RuntimeError: config file /etc/ceph/ceph.conf exists with different content; use –overwrite-conf to overwrite
+[ceph_deploy][ERROR ] GenericError: Failed to create 1 OSDs
+
+因为已经有/etc/ceph/ceph.conf了，所以要增加–overwrite-conf参数来覆盖
+
+解决：
+# ceph-deploy –overwrite-conf osd prepare ceph01:vdc:vdb1
+然后重启了mon和该osd的服务，发现没有异常，确认该方法生成的mon.keyring不会与之前丢失的mon.keyring冲突。
