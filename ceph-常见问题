@@ -1,0 +1,186 @@
+
+Ceph常见问题百科全书
+
+Ceph是目前炙手可热的一个统一分布式存储系统，具有优异的性能、可靠性、可扩展性。其可轻松扩展到数 PB 容量， 支持多种工作负载的高性能（每秒输入/输出操作[IOPS]和带宽），具有极其高的可靠性。Ceph对比HDFS优势在于易扩展，无单点。HDFS是专门为Hadoop这样的云计算而生，在离线批量处理大数据上有先天的优势，而Ceph是一个通用的实时存储系统，具有相当好的超大数量小文件处理能力，且现在Hadoop可以利用Ceph作为存储后端。Ceph最近加入到 Linux 中令人印象深刻的文件系统备选行列，能够在维护 POSIX 兼容性的同时加入了复制和容错功能，成为现在分布式系统的掌上明珠。
+而在Ceph系统的搭建过程中会出现种种意想不到问题，真的是稀奇古怪的让人意想不到的问题，整个过程中看似每一步都正确，感觉都对，结果还是出现各种问题，更可恨的是其中遇到的很多问题在网上并不能搜索到，有的从国外论坛上能搜索到但是并没有答案（正如硬件开发时候经常出现都对都不对，重启一下全都对的情况）。然而对于Ceph这块重启并不能解决问题，还需一步一步踏踏实实的进行研究，分析解决问题，并进行总结。
+笔者在此对Ceph开发过程中的血泪经验在此与大家分享，对本人在Ceph研发过程中遇到的错误进行记录并提出解决方案，一来是做个总结，二来是为此后进行Ceph开发的大家指出雷区，使大家少爬一点坑，希望能做出一点微小的贡献。
+ 
+从基础环境开始在Ceph环境搭建过程中的常见问题有（在此按照问题出现的频率进行粗略排序）采用系统为Centos7（谨以此作为示例）
+1.      执行命令：#ceph-deploy install admin-node node1 node2 node3
+ERROR：[ceph_deploy][ERROR ]RuntimeError: Failed to execute command: yum -y install epel-release
+解决办法：进入/etc/yum.repos.d中删除epel.repo和epel-testing.repo
+2.     执行命令：#ceph-deploy install admin-node node1 node2 node3
+ERROR：[ceph_deploy][ERROR ] RuntimeError: Failed to execute command: rpm -Uvh --replacepkgs http://ceph.com/rpm-giant/el6/noarch/ceph-release-1-0.el6.noarch.rpm
+解决办法：进入/etc/yum.repos.d/ceph.repo文件将所有的源改为网易163源，或者阿里源（经测试网易163源更好用点）编辑ceph源的配置文件， vim  /etc/yum.repo.d/ceph.repo，更改为如下内容：
+ [Ceph]
+name=Ceph packages for $basearch
+baseurl=http:// mirrors.163.com/ceph /rpm-jewel/el7/$basearch
+enabled=1
+gpgcheck=1
+type=rpm-md
+gpgkey=https:// mirrors.163.com/ceph /keys/release.asc
+priority=1
+[Ceph-noarch]
+name=Ceph noarch packages
+baseurl=http:// mirrors.163.com/ceph /rpm-jewel/el7/noarch
+enabled=1
+gpgcheck=1
+type=rpm-md
+gpgkey=https:// mirrors.163.com/ceph /keys/release.asc
+priority=1
+[ceph-source]
+name=Ceph source packages
+baseurl=http:// mirrors.163.com/ceph /rpm-jewel/el7/SRPMS
+enabled=1
+gpgcheck=1
+type=rpm-md
+gpgkey=https:// mirrors.163.com/ceph /keys/release.asc
+priority=1
+编辑完成之后保存退出并运行yum clean all && yum makecache
+Ceph官网提供的download.ceph.com在一些情况下非常不好用。在此建议使用网易yum
+ 
+3.     执行命令：#ceph-deploy install admin-node node1 node2 node3
+ERROR：[ceph_deploy][ERROR ] RuntimeError: NoSectionError: No section: ‘   ceph’
+解决办法：安装包冲突，直接移除已经安装的 rpm（把各个节点的这个包都移除）
+    yum remove ceph-release -y
+4.     执行命令：#ceph-deploy install admin-node node1 node2 node3
+ERROR: [ceph1][INFO  ] Running command: yum -y install ceph ceph-radosgw
+[ceph1][WARNIN] No data was received after 300 seconds, disconnecting
+[ceph_deploy][ERROR ] RuntimeError: Failed to execute command: ceph --version
+解决办法：同样是因为一些不明状况的网络问题，（官方网址总是坑人），建议更换网易163源在重新试试
+5.     执行命令：# ceph-deploy mon create-initial
+ERROR：[ceph1][ERROR ] “ceph auth get-or-create for keytype admin returned 1
+解决办法：ceph.conf 中 public network 配置错误，和 mon_host 不在同一个网段。
+配置正确的应该是： mon_host = 192.168.122.18  
+public network = 192.168.122.18/24
+6.     执行命令：#ceph-deploy  osd  prepare node1：/var/local/osd0 …
+ERROR: error creating empty object store in /var/local/osd0: (13) Permission denied
+[admin-node][ERROR ] RuntimeError: command returned non-zero exitstatus: 1
+[ceph_deploy][ERROR ] RuntimeError: Failedto execute command: /usr/sbin/ceph-disk -v activate --mark-init systemd --mount/var/local/osd0
+解决办法：权限不够 进入到各节点上运行
+chmod 777  /var/local/osd0        或者    chmod  –R  777  /var/local/osd1/
+chmod 777  /var/local/osd1
+7.     执行命令：#ceph-deploy  osd  prepare node1：/var/local/osd0 … 
+#ceph-deploy  osd  activate node1：/var/local/osd0 …
+ERROR：要是在原有的osd基础之上重新prepare或者activate osd的话，经常会出现already exist    或者[admin-node][ERROR ] RuntimeError: command returned non-zero exitstatus: 1之类这样的错误。
+解决办法：产生此类错误的原因均为再重新安装Ceph的过程中并未将原有的osd进行重新设置，其中还保存有原有的conf信息，并且在集群conf中依旧保存的是原有信息。采用重写conf命令即可解决，建议在重装ceph时均采用--overwrite-conf命令
+#ceph-deploy --overwrite-conf osd  prepare node1：/var/local/osd0
+#ceph-deploy --overwrite-conf osd  activate node1：/var/local/osd0
+#ceph-deploy --overwrite-conf mon create-initial 
+ 
+8.     ERROR：[admin-node][WARNIN] Anotherapp is currently holding the yum lock; waiting for it to exit... [admin-node][WARNIN] Anotherapp is currently holding the yum lock; waiting for it to exit...
+解决办法：引发此问题的原因为上一次执行yum操作时由于网络问题或者源头问题以及防火墙问题等引起上一次yum操作进程并未执行结束，系统仍在执行该进程，解决办法为关闭此进程。网上博客介绍采用rm -f /var/run/yum.pid命令，但只有部分情况适用。终极必杀技reboot，直接进行reboot，然后进来重新进行操作，包治百病，屡试不爽。
+rm -f /var/run/yum.pid    或者 reboot
+9.     ERROR：由于多次安装Ceph导致环境不知道哪里出了问题（新旧错误都重叠在一块了）总之怎么样都不能正确进行安装，已经心灰意冷，准备重新安装。
+解决方案：再重新安装之前请留步，相信我环境混乱的情况下安装出现问题最多的地方是ceph-deploy install admin-node node1 node2 node3 总之能不重新安装就别重新安装，这中间会引发很多问题。
+比较好一点的解决方案，清理Ceph环境，本文在此引用小胖的大话Ceph 的环境清理！
+ 
+如果之前部署失败了，不必删除ceph客户端，或者重新搭建虚拟机，只需要在每个节点上执行如下指令即可将环境清理至刚安装完ceph客户端时的状态！强烈建议在旧集群上搭建之前清理干净环境，否则会发生各种异常情况。
+ps aux|grep ceph |awk '{print $2}'|xargs kill -9
+ps -ef|grep ceph
+#确保此时所有ceph进程都已经关闭！！！如果没有关闭，多执行几次。
+umount /var/lib/ceph/osd/*
+rm -rf /var/lib/ceph/osd/*
+rm -rf /var/lib/ceph/mon/*
+rm -rf /var/lib/ceph/mds/*
+rm -rf /var/lib/ceph/bootstrap-mds/*
+rm -rf /var/lib/ceph/bootstrap-osd/*
+rm -rf /var/lib/ceph/bootstrap-rgw/*
+rm -rf /var/lib/ceph/tmp/*
+rm -rf /etc/ceph/*
+rm -rf /var/run/ceph/*
+10.  执行命令：#ceph-deploy  osd  prepare node1：/var/local/osd0 … 
+#ceph-deploy  osd  activate node1：/var/local/osd0 …
+ERROR：can not find /etc/ceph/osd   或者can not find /etc/ceph/mon等错误，运行完环境清理之后在进行Ceph安装部署时仍然会出现很多问题，如在准备以及激活OSD时候会出现如上错误，原因是清理环境时候将/ect/ceph/文件夹里边的所有东西都已经清理啊干净，系统并不能找到合适的位置进行部署。
+解决方案：自己手动在/etc/ceph/文件夹下创建osd mds mon等文件夹
+Sudo mkdir /etc/ceph/osd  其他两个如此。
+11.  执行命令：ceph osd tree  ceph -s   ceph health   ceph -w
+ERROR：系统卡住什么也不显示，只能手动切断该过程，所有ceph有关命令全部失效。那么就会报错：ERROR: missing keyring。也就是说，用户client.admin登陆 Ceph 系统失败！ Error connecting to cluster: ObjectNotFound
+ 
+解决办法：错误原因位系统不能找到Client ：/etc/ceph/ceph.client.admin.keyring。通常我们执行ceph -s 时，就相当于开启了一个客户端，连接到 Ceph 集群，而这个客户端默认是使用 client.admin 的账户密码登陆连接集群的，所以平时执行的ceph -s 相当于执行了 ceph -s --name client.admin --keyring /etc/ceph/ceph.client.admin.keyring。需要注意的是，每次我们在命令行执行 Ceph 的指令，都相当于开启一个客户端，和集群交互，再关闭客户端。
+采用
+12.   执行命令：sudo yum update && sudo yum install ceph-deploy
+ERROR： 在安装ceph-deploy工具时常见的错误有search for fastest mirror 。。。  302 time out ，或者是404not found等因为网络的原因无法下载。
+解决办法：如problem  2所示更换网易163源
+或者直接构建本地源来进行安装（在此采用阿里源）
+mkdir -p /var/www/html/ceph/10.2.2
+cd /var/www/html/ceph/10.2.2
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/ceph-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/ceph-base-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/ceph-common-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/ceph-devel-compat-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/ceph-fuse-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/ceph-libs-compat-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/ceph-mds-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/ceph-mon-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/ceph-osd-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/ceph-radosgw-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/ceph-selinux-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/ceph-test-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/cephfs-java-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/libcephfs1-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/libcephfs1-devel-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/libcephfs_jni1-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/libcephfs_jni1-devel-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/librados2-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/librados2-devel-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/libradosstriper1-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/libradosstriper1-devel-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/librbd1-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/librbd1-devel-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/librgw2-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/librgw2-devel-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/python-ceph-compat-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/python-cephfs-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/python-rados-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/python-rbd-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/rbd-fuse-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/rbd-mirror-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-jewel/el7/x86_64/rbd-nbd-10.2.2-0.el7.x86_64.rpm
+wget http://mirrors.aliyun.com/ceph/rpm-hammer/el7/noarch/ceph-deploy-1.5.36-0.noarch.rpm
+此过程不采用deploy工具
+13.  ERROR：mds 状态一直为creating状态
+ceph mds stat
+e6: 1/1/1 up {0=node0=up:creating }, 1 up:standby
+解决办法：产生此原因的问题为在ceph集群状态还没有达到HEALTH_OK的状态下就执行ceph-deploy mds create node 的操作，解决途径为等ceph状态为HEALTH_OK时在进行。
+14.  ERROR： HEALTH_ERR
+health HEALTH_ERR 192 pgs stuck inactive; 192 pgs stuck unclean; no osds monmap e1: 1 mons at {essperf13=209.243.160.45:6789/0}, election epoch 1, quorum 0 essperf13 osdmap e205: 0 osds: 0 up, 0 in pgmap v928: 192 pgs, 3 pools, 0 bytes data, 0 objects 0 kB used, 0 kB / 0 kB avail 192 creating
+解决办法：将各个节点上时间进行同步要不然会出现时间漂移错误，使得mon检测的心跳信息出现问题，解决办法参考NTP服务器时间同步
+15.  启动关闭ceph或者查看ceph状态采用（启动start 关闭 stop 重启 restart 查看状态 status）
+ceph重启mon命令以node4的mon为例
+systemctl restart ceph-mon@node4.service 
+ceph重启mon命令以node4的mon为例
+systemctl restart ceph-osd@osd.0
+ ceph重启命令
+systemctl restart ceph.target
+16.  重启ceph时应该先启动MON在启动OSD
+17.  Ceph pool 中的pg数只能从小到大，不能从大到小
+18.  Pg数应该合适，不宜过大或者过小 pg数计算公式为
+Total PGs = ((Total_number_of_OSD * 100) / max_replication_count) / pool_count
+ 
+ 
+ 
+1. Re:Ceph万兆内网与系统万兆迁移
+没有机会接触万兆网络, 好像试一试
+--zhouandke
+2. Re:计数排序详解
+@ 张熙12正解...
+--Freedom314
+3. Re:计数排序详解
+在头文件中应该还要加入#include <cstring>，不然的话memset函数会报错
+--张熙12
+阅读排行榜
+1. 计数排序详解(18097)
+2. C++输入输出总结_输入(10509)
+3. 全局变量与局部变量重名(4204)
+4. Ceph常见问题百科全书(3251)
+5. ceph 常见问题百科全书---luminous安装部署篇(2855)
+评论排行榜
+1. 计数排序详解(2)
+2. Ceph万兆内网与系统万兆迁移(1)
+推荐排行榜
+1. 全局变量与局部变量重名(1)
+Copyright © 2019 Freedom314 
+Powered by .NET Core 3.0 Preview 8 on Linux
+
+
