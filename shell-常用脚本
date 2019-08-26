@@ -1,0 +1,88 @@
+1.经过5000次循环后，生成一个长的URL地址栏
+#!/bin/bash
+URL=http://192.168.4.5/index.html?
+for i in {1..5000}
+do
+    URL=${URL}v$i=$i
+done
+curl $URL                          
+
+
+2.日志切割
+#!/bin/bash                      
+date=`date +%Y%m%d` 
+logpath=/usr/local/nginx/logs
+mv $logpath/access.log $logpath/access-$date.log
+mv $logpath/error.log $logpath/error-$date.log
+kill -USR1 $(cat $logpath/nginx.pid)
+
+3.新建心跳脚本文件,并追加到配置文件
+/usr/local/keepalived/nginx_check.sh
+#!/bin/sh
+A=`ps -C nginx --no-header |wc -l`
+if [ $A -eq 0 ];then
+    /usr/local/nginx/sbin/nginx
+    sleep 2
+    if [ `ps -C nginx --no-header |wc -l` -eq 0 ];then
+        killall keepalived
+    fi
+fi
+
+4.查看系统负载均衡
+uptime | awk '{printf ("%.2f",$(NF-2))}'                      
+
+
+5.提取网卡流量:
+ifconfig eth0 | sed -rn '/RX p|TX p/p' | awk -F[\(\)] '{print $2}'    
+//首先使用前置命令查看eth0网卡所有信息, 然后使用sed过滤显示有RX p(接收的流量)和TX p(发送的流量)的行, 
+最后使用awk 定义小括号为分隔符 ,并输出第2列.
+ifconfig eth0 | awk -F[\(\)] '/RX p|TX p/{print $2}'  //awk也支持正则, 效果同上
+
+
+6.awk支持常量输出,放在双引号中间即可
+df -h | awk '/vda1/{print "当前主机根分区剩余空间是"$4}'  //配合常量输出
+
+7.在安全日志文件中利用awk筛选出访问本机失败的ip,可加逗号做空格
+awk '/Failed/{print "登录本机失败的IP地址",$11}' /var/log/secure    
+
+
+awk的内置变量: 
+$0显示所有      $1 $2 $3...      NR显示行号    NF显示列号
+
+
+8.使用awk统计网站访问者的ip与点击量
+1,安装httpd与测试工具
+   yum -y install httpd elinks
+2,开启httpd服务
+3,使用测试工具访问本机网站
+   elinks -dump 127.0.0.1
+4,查看httpd访问量日志
+   vim /var/log/httpd/access_log
+    再使用其他主机访问此http服务(注意关闭防火墙),再次查看日志发现增加了新记录
+5,使用awk查看最终结果
+awk '{ip[$1]++}END{for(i in ip){print ip[i],i}}'  /var/log/httpd/access_log  | sort -r 
+6,可以配合脚本增加访问次数再次检测
+#!/bin/bash
+for i in {1..5000}
+do
+	elinks -dump 172.25.0.10 &> /dev/null
+done
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
