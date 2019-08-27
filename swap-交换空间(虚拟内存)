@@ -1,0 +1,61 @@
+
+
+
+宽松模式:
+默认区域为trusted,把拒绝的客户端源IP地址写入block,拒绝的较少允许较多
+
+严格模式:
+默认区域为block,把允许的客户端源IP地址写入trusted,拒绝的较多允许较少
+
+
+###########################################################
+
+交换空间(虚拟内存)
+   当真实物理内存不够用时,会启用交换空间,将不常用的内存数据暂时放入到,交换空间中,缓解内存不足
+
+   利用硬盘的空间来充当交换空间(虚拟内存)
+
+
+1.划分新的分区
+[root@server0 ~]# fdisk /dev/vdb   #划分两个主分区分别为2G
+[root@server0 ~]# lsblk 
+[root@server0 ~]# ls /dev/vdb[1-2]
+
+2.格式化文件系统swap(交换文件系统)
+[root@server0 ~]# mkswap /dev/vdb1
+[root@server0 ~]# mkswap /dev/vdb2
+
+[root@server0 ~]# blkid /dev/vdb1
+[root@server0 ~]# blkid /dev/vdb2
+
+3.启用交换分区
+[root@server0 ~]# swapon /dev/vdb1 
+[root@server0 ~]# swapon -s          #查看组成交换空间的成员
+
+[root@server0 ~]# swapon /dev/vdb2
+[root@server0 ~]# swapon -s          #查看组成交换空间的成员
+
+4.开机自动启用交换分区
+[root@server0 ~]# vim /etc/fstab    
+/dev/vdb1  swap  swap defaults 0 0
+/dev/vdb2  swap  swap defaults 0 0
+
+[root@server0 ~]# swapon -s
+[root@server0 ~]# swapoff  /dev/vdb1   #停用交换分区/dev/vdb1
+[root@server0 ~]# swapoff  /dev/vdb2   #停用交换分区/dev/vdb2
+[root@server0 ~]# swapon -s 
+
+[root@server0 ~]# swapon -a    #专用于检测交换分区开机自动挂载
+[root@server0 ~]# swapon -s
+
+################################################
+
+
+
+
+
+
+
+
+
+
