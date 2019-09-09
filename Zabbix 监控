@@ -137,7 +137,7 @@ echo $i;
 创建数据库，上线Zabbix的Web页面
 
 [root@zabbixserver ~]# mysql
-mysql> create database zabbix character set utf8;   //创建数据库，支持中文字符集
+mysql> create database zabbix character set utf8;                          //创建数据库，支持中文字符集
 mysql> grant all on zabbix.* to zabbix@'localhost' identified by 'zabbix'; //创建可以访问数据库的账户与密码
 [root@zabbixserver ~]# cd /root/zabbix-3.4.4/database/mysql/
 [root@zabbixserver mysql]# mysql -uzabbix -pzabbix zabbix < schema.sql
@@ -154,11 +154,11 @@ mysql> grant all on zabbix.* to zabbix@'localhost' identified by 'zabbix'; //创
 修改Zabbix_server配置文件，设置数据库相关参数，启动Zabbix_server服务
 
 [root@zabbixserver ~]# vim /usr/local/etc/zabbix_server.conf
-DBHost=localhost                //数据库主机，默认该行被注释
-DBName=zabbix                   //设置数据库名称
-DBUser=zabbix                   //设置数据库账户
-DBPassword=zabbix               //设置数据库密码，默认该行被注释
-LogFile=/tmp/zabbix_server.log  //设置日志，仅查看以下即可
+85行  DBHost=localhost                //数据库主机，默认该行被注释
+95行  DBName=zabbix                   //设置数据库名称i
+111行 DBUser=zabbix                   //设置数据库账户
+119行 DBPassword=zabbix               //设置数据库密码，默认该行被注释
+38行  LogFile=/tmp/zabbix_server.log  //设置日志，仅查看以下即可
 
 [root@zabbixserver ~]# useradd -s /sbin/nologin zabbix    //不创建用户无法启动服务
 [root@zabbixserver ~]# zabbix_server                      //启动服务
@@ -187,15 +187,15 @@ tcp    LISTEN     0      128       *:10050                 *:*  \
 //默认会提示PHP的配置不满足环境要求，需要修改PHP配置文件
 
 根据错误提示，修改PHP配置文件，满足Zabbix_server的Web环境要求
-[root@zabbixserver ~]# yum -y install  php-gd php-xml
+[root@zabbixserver ~]# yum -y install  php-gd php-xml php-ldap
 [root@zabbixserver ~]# yum install php-bcmath-5.4.16-42.el7.x86_64.rpm  
 [root@zabbixserver ~]# yum install php-mbstring-5.4.16-42.el7.x86_64.rpm
 [root@zabbixserver ~]# vim /etc/php.ini
-date.timezone = Asia/Shanghai                //设置时区
-max_execution_time = 300                    //最大执行时间，秒
-post_max_size = 32M                        //POST数据最大容量
-max_input_time = 300                        //服务器接收数据的时间限制
-memory_limit = 128M                        //内存容量限制
+884行 date.timezone = Asia/Shanghai               //设置时区
+390行 max_execution_time = 300                    //最大执行时间，秒
+678行 post_max_size = 32M                         //POST数据最大容量
+400行 max_input_time = 300                        //服务器接收数据的时间限制
+411行 memory_limit = 128M                         //内存容量限制
 [root@zabbixserver ~]# systemctl restart php-fpm
 
 再次使用浏览器访问服务器，会出现图形登录zabbix界面
